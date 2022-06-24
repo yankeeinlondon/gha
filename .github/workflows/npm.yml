@@ -32,8 +32,9 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - name: Install pnpm
         run: npm i -g pnpm @antfu/ni
-      - name: Clean Install
-        run: nci
+      - name: Install
+        # https://github.com/antfu/ni#nci---clean-install
+        run: ni
       - name: Build
         run: nr build
       - name: Info

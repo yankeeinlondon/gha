@@ -49,8 +49,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Setup
         run: npm i -g pnpm @antfu/ni
-      - name: Clean Install
-        run: nci
+      - name: Install
+        # https://github.com/antfu/ni#ni---install
+        run: ni
       - name: Build
         run: nr build
       - name: Test

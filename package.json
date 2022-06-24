@@ -1,0 +1,21 @@
+{
+  "name": "gh-npm-release",
+  "version": "0.1.0",
+  "description": "Reusable Github workflow which publishes pnpm library code to npm",
+  "scripts": {
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yankeeinlondon/gha.git"
+  },
+  "keywords": [
+    "github-actions"
+  ],
+  "author": "Ken Snyder <ken@ken.net>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yankeeinlondon/gha/issues"
+  },
+  "homepage": "https://github.com/yankeeinlondon/gha#readme"
+}

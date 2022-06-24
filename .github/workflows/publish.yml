@@ -1,0 +1,72 @@
+name: NPM Publish
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: the branch which you want to allow publish to NPM; other branches will not be allowed
+        type: string
+        default: main
+        required: false
+      allowPullRequest:
+        description: by default only "push" events are allowed but if this is changed to true then pull requests will also be allowed.
+        type: boolean
+        default: false
+        required: false
+      nodeVersion:
+        type: number
+        default: 16
+        required: false
+      private:
+        type: boolean
+        default: false
+        required: false
+
+    secrets:
+      npm_token:
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate Branch
+        if: startsWith(github.ref, 'refs/heads/${{ inputs.branch }}')
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setFailed('The current branch is not allowed to publish to NPM!')
+      - name: Validate Event Type
+        if: contains(github.eventType, 'pullRequest') || inputs.allowPullRequest == true
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setFailed('Pull requests are not allowed to publish directly to NPM unless the "allowPullRequest" property is set to true')
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+          registry-url: https://registry.npmjs.org/
+      - name: Install pnpm
+        run: npm i -g pnpm @antfu/ni
+      - name: Clean Install
+        run: nci
+      - name: Build
+        run: nr build
+      - name: Info
+        run: |
+          echo "user:\t\t${{github.actor}}"
+          echo "commit msg:\t\t${{github.eventType}}"
+      - name: Publish to NPM
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+      - name: Create Changelog Entry
+        run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

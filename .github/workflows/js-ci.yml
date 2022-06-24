@@ -1,0 +1,48 @@
+name: Continuous Integration
+
+on:
+  workflow_call:
+    inputs:
+      skipPublishing:
+        type: boolean
+        default: false
+        required: false
+      nodeVersion:
+        type: number
+        default: 16
+        required: false
+      private:
+        type: boolean
+        default: false
+        required: false
+    secrets:
+      npm_token:
+        required: true
+
+jobs:
+  # start with testing in all cases
+  test:
+    uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+
+  publish:
+    name: npm
+    if: ( contains(github.event.head_commit.message, 'release v') || !inputs.skipPublishing )
+    needs:
+      - test
+    uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+    with:
+      nodeVersion: ${{ inputs.nodeVersion }}
+      private: ${{ inputs.private }}
+    secrets:
+      npm_token: ${{secrets.NPM_TOKEN}}
+
+  do_not_publish:
+    name: npm / no publication
+    if: ( !contains(github.event.head_commit.message, 'release v') || inputs.skipPublishing )
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    steps:
+      - name: Done
+        run: |
+          echo "no publication to NPM required"

@@ -21,6 +21,7 @@
   "homepage": "https://github.com/yankeeinlondon/gha#readme",
   "devDependencies": {
     "@vitest/ui": "^0.15.2",
+    "bumpp": "^8.2.1",
     "vitest": "^0.15.2"
   }
 }

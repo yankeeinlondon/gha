@@ -5,7 +5,7 @@ on:
 
 jobs:
   lint:
-    name: test / lint
+    name: lint
     runs-on: ubuntu-latest
 
     steps:
@@ -19,7 +19,7 @@ jobs:
         run: nr lint --if-present
 
   test:
-    name: test / unit
+    name: test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -43,7 +43,7 @@ jobs:
         run: nr test --if-present
 
   complete:
-    name: test / complete
+    name: complete
     runs-on: ubuntu-latest
     needs:
       - test

@@ -36,10 +36,6 @@ jobs:
         run: pnpm install
       - name: Build
         run: nr build
-      - name: Info
-        run: |
-          echo "user:\t\t${{github.actor}}"
-          echo "commit msg:\t\t${{github.eventType}}"
       - name: Publish to NPM
         run: npm publish --access public
         env:

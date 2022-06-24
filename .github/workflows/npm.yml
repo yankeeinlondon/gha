@@ -33,8 +33,7 @@ jobs:
       - name: Install pnpm
         run: npm i -g pnpm @antfu/ni
       - name: Clean Install
-        # https://github.com/antfu/ni#nci---clean-install
-        run: nci
+        run: pnpm install
       - name: Build
         run: nr build
       - name: Info

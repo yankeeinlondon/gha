@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest --passWithNoTests"
   },
   "repository": {
     "type": "git",
@@ -17,5 +17,9 @@
   "bugs": {
     "url": "https://github.com/yankeeinlondon/gha/issues"
   },
-  "homepage": "https://github.com/yankeeinlondon/gha#readme"
+  "homepage": "https://github.com/yankeeinlondon/gha#readme",
+  "devDependencies": {
+    "@vitest/ui": "^0.15.2",
+    "vitest": "^0.15.2"
+  }
 }

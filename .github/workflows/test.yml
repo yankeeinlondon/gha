@@ -50,8 +50,8 @@ jobs:
       - name: Setup
         run: npm i -g pnpm @antfu/ni
       - name: Install
-        # https://github.com/antfu/ni#ni---install
-        run: ni
+        # https://github.com/antfu/ni#nci---clean-install
+        run: nci
       - name: Build
         run: nr build
       - name: Test

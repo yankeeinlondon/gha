@@ -4,7 +4,9 @@
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
   "scripts": {
     "test": "vitest --passWithNoTests",
-    "build": "echo no build script needed"
+    "build": "echo no build script needed",
+    "prepublishOnly": "pnpm audit --fix && pnpm install",
+    "publish": "bumpp"
   },
   "repository": {
     "type": "git",

@@ -1,4 +1,4 @@
-name: CI (features)
+name: CI (features & PRs)
 
 on:
   push:

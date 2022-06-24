@@ -2,6 +2,19 @@ name: Test
 
 on:
   workflow_call:
+    inputs:
+      os:
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+        required: false
+      nodeVersions:
+        type: string
+        default: '["14.x", "16.x"]'
+        required: false
+      failFast:
+        type: boolean
+        default: false
+        required: false
 
 jobs:
   lint:
@@ -23,9 +36,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        node-version: [14.x, 16.x]
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ${{ fromJSON(inputs.nodeVersions) }}
+        os: ${{ fromJSON(inputs.os) }}
       fail-fast: false
+      # fail-fast: ${{ inputs.failFast }}
 
     steps:
       - uses: actions/checkout@v2
@@ -52,4 +66,5 @@ jobs:
     steps:
       - name: Success
         run: |
-          echo :rocket: tests run successfully
+          echo ":rocket: tests run successfully"
+          echo "::notice status=success::Tests and Linting completed successfully"

@@ -48,3 +48,6 @@ jobs:
         run: npx changelogithub
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Done
+        run: |
+          echo "::notice ::Published to NPM and updated the repo's changelog entry :party:"

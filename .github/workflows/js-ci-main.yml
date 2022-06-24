@@ -31,4 +31,4 @@ jobs:
     steps:
       - name: Done
         run: |
-          echo "no publication to NPM required"
+          echo "::notice ::No need to publish to NPM"

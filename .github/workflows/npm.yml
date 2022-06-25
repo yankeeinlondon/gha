@@ -46,4 +46,4 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Done
         run: |
-          echo "::notice ::Published to NPM and updated the repo's changelog entry :party:"
+          echo "::notice :: ${{ github.actor }} published from ${{github.ref_type}} ${{ github.ref_name }}} to NPM and updated the repo's changelog entry 🚀"

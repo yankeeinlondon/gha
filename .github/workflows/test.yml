@@ -94,4 +94,4 @@ jobs:
       - name: Success
         run: |
           echo ":rocket: tests run successfully"
-          echo "::notice status=success::Tests and Linting completed successfully"
+          echo "::notice status=success::Tests and Linting completed successfully.\nThe changes in this commit versus last can be found at: ${{ github.event.compare }}"

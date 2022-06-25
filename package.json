@@ -5,8 +5,9 @@
   "scripts": {
     "test": "vitest --passWithNoTests",
     "build": "echo no build script needed",
-    "prepublishOnly": "pnpm audit --fix && pnpm install",
-    "publish": "bumpp"
+    "audit:fix": "pnpm audit --fix && pnpm install",
+    "release": "run-s audit:fix release:bump",
+    "release:bump": "bumpp"
   },
   "repository": {
     "type": "git",

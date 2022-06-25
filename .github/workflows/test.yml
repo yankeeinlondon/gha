@@ -15,8 +15,37 @@ on:
         type: boolean
         default: false
         required: false
+      metrics:
+        type: boolean
+        default: false
+        required: false
+      metricsCommand:
+        type: string
+        default: "pnpm test:metrics"
+        required: false
 
 jobs:
+  metrics:
+    name: metrics
+    runs-on: ubuntu-latest
+    if: ${{ inputs.metrics }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16
+      - name: Setup
+        run: npm i -g pnpm @antfu/ni
+      - name: Install
+        run: pnpm install
+      - name: Build
+        run: nr build
+      - name: Test
+        run: |
+          results=`${{ inputs.metricsCommand }}`
+
   lint:
     name: lint
     runs-on: ubuntu-latest
@@ -65,8 +94,7 @@ jobs:
       matrix:
         node-version: ${{ fromJSON(inputs.nodeVersions) }}
         os: ${{ fromJSON(inputs.os) }}
-      fail-fast: false
-      # fail-fast: ${{ inputs.failFast }}
+      fail-fast: ${{ inputs.failFast }}
 
     steps:
       - uses: actions/checkout@v2
@@ -81,7 +109,10 @@ jobs:
       - name: Build
         run: nr build
       - name: Test
-        run: nr test --if-present
+        run: |
+          results=`npx vitest --passWithNoTests --reporter json`
+          echo "${{fromJSON(results)}}""
+          echo "::notice :: ${{ results.numTotalTests }} tests, ${{ results.numPassedTests }} passed, ${{ results.numFailedTests }} [ ${{ results.numTodoTests }} todos, ${{ results.numPendingTests }} pending ]"
 
   complete:
     name: complete

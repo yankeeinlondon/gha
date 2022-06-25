@@ -28,9 +28,6 @@
     "jq": "^1.7.2",
     "vitest": "^0.15.2"
   },
-  "dependencies": {
-    "changelogithub": "^0.7.0"
-  },
   "pnpm": {
     "overrides": {
       "xmlhttprequest@<1.7.0": ">=1.7.0",

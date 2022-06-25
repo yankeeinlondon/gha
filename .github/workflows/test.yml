@@ -25,9 +25,12 @@ jobs:
       - name: Info
         run: |
           echo "::group::Info"
-          echo "Commit Msg:\t\t${{github.event.head_commit.message}}"
+          echo "Commit Msg: '${{github.event.head_commit.message}}'"
           echo "Actor: ${{github.actor}}"
           echo "ENV: ${{ toJSON(env) }}"
+          echo "Job: ${{ toJSON(job) }}"
+          echo "Steps: ${{ toJSON(steps) }}"
+          echo "Runner: ${{ toJSON(runner) }}"
           echo "::endgroup::"
       - name: Checkout Code
         uses: actions/checkout@v3

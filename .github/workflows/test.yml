@@ -48,9 +48,9 @@ jobs:
           ::set-output name=results::`${{ inputs.metricsCommand }}`
       - name: Results
         env:
-          results: fromJSON(steps.test.results)
+          TST: fromJSON(steps.test.results)
         run: |
-          echo "::notice :: ${results.numTotalTests }} tests, ${{ results.numPassedTests }} passed, ${{ results.numFailedTests }} [ ${{ results.numTodoTests }} todos, ${{ results.numPendingTests }} pending ]"
+          echo "::notice :: ${{ TST.numTotalTests }} tests, ${{ TST.numPassedTests }} passed, ${{ TST.numFailedTests }} [ ${{ TST.numTodoTests }} todos, ${{ TST.numPendingTests }} pending ]"
 
   lint:
     name: lint

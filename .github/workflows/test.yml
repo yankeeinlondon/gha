@@ -110,7 +110,7 @@ jobs:
         run: nr build
       - name: Test
         run: |
-          results=`npx vitest --passWithNoTests --reporter json`
+          results=`npx vitest run --passWithNoTests --reporter json`
           echo "${{fromJSON(results)}}""
           echo "::notice :: ${{ results.numTotalTests }} tests, ${{ results.numPassedTests }} passed, ${{ results.numFailedTests }} [ ${{ results.numTodoTests }} todos, ${{ results.numPendingTests }} pending ]"
 

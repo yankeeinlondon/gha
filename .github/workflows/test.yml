@@ -110,15 +110,14 @@ jobs:
       - name: Build
         run: nr build
       - name: Test
-        run: |
-          npx zx <<'EOF'
-          import { spawnSync } from "child_process";
+        env:
+          TEST_CMD: |
+            import { spawnSync } from "child_process";
+            let thread = spawnSync('npx', ['vitest', 'run', '--passWithNoTests', '--reporter', 'json']);
+            let results = thread.stdout.toString();
+            console.log("results:", results);
 
-          let thread = spawnSync('npx', ['vitest', 'run', '--passWithNoTests', '--reporter', 'json']);
-          let results = thread.stdout.toString();
-
-          console.log("results:", results);
-          EOF
+        run: "npx zx $TEST_CMD"
 
   complete:
     name: complete

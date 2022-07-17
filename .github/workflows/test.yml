@@ -111,9 +111,14 @@ jobs:
         run: nr build
       - name: Test
         run: |
-          echo "OS: ${OSTYPE}"
-          test=`npx run vitest --passWithNoTests --reporter json 2>&1`
-          echo "Test results: ${test}"
+          npx zx <<'EOF'
+          import { spawnSync } from "child_process";
+
+          let thread = spawnSync('npx', ['vitest', 'run', '--passWithNoTests', '--reporter', 'json']);
+          let results = thread.stdout;
+
+          console.log("results:", results);
+          EOF
 
   complete:
     name: complete

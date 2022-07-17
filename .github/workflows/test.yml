@@ -94,7 +94,8 @@ jobs:
       matrix:
         node-version: ${{ fromJSON(inputs.nodeVersions) }}
         os: ${{ fromJSON(inputs.os) }}
-      fail-fast: ${{ inputs.failFast }}
+      # fail-fast: ${{ inputs.failFast }}
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v2
@@ -110,8 +111,7 @@ jobs:
         run: nr build
       - name: Test
         run: |
-          results=`npx vitest run --passWithNoTests --reporter json`
-          echo "${{fromJSON(results)}}""
+          results=fromJSON(`npx vitest run --passWithNoTests --reporter json`)
           echo "::notice :: ${{ results.numTotalTests }} tests, ${{ results.numPassedTests }} passed, ${{ results.numFailedTests }} [ ${{ results.numTodoTests }} todos, ${{ results.numPendingTests }} pending ]"
 
   complete:

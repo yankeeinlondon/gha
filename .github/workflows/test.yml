@@ -115,7 +115,7 @@ jobs:
           import { spawnSync } from "child_process";
 
           let thread = spawnSync('npx', ['vitest', 'run', '--passWithNoTests', '--reporter', 'json']);
-          let results = thread.stdout;
+          let results = thread.stdout.toString();
 
           console.log("results:", results);
           EOF

@@ -111,8 +111,8 @@ jobs:
         run: nr build
       - name: Test
         run: |
-          test=`npx vitest run --passWithNoTests --reporter json`
-          echo "${test}"
+          test=`nx --passWithNoTests --reporter json 2>&1`
+          echo "Test results: ${test}"
 
   complete:
     name: complete

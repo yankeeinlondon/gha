@@ -117,7 +117,9 @@ jobs:
             let results = thread.stdout.toString();
             console.log("results:", results);
 
-        run: "npx zx $TEST_CMD"
+        run: |
+          echo "OS: $matrix.os"
+          npx run vitest --passWithNoTests --reporter json 2>&1
 
   complete:
     name: complete

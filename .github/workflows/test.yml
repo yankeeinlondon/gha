@@ -43,9 +43,14 @@ jobs:
       - name: Build
         run: nr build
       - name: Test
+        id: test
         run: |
-          results=`${{ inputs.metricsCommand }}`
-          echo "::notice :: ${{ results.numTotalTests }} tests, ${{ results.numPassedTests }} passed, ${{ results.numFailedTests }} [ ${{ results.numTodoTests }} todos, ${{ results.numPendingTests }} pending ]"
+          ::set-output name=results::`${{ inputs.metricsCommand }}`
+      - name: Results
+        env:
+          results: fromJSON(steps.test.results)
+        run: |
+          echo "::notice :: ${results.numTotalTests }} tests, ${{ results.numPassedTests }} passed, ${{ results.numFailedTests }} [ ${{ results.numTodoTests }} todos, ${{ results.numPendingTests }} pending ]"
 
   lint:
     name: lint

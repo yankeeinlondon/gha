@@ -50,7 +50,7 @@ jobs:
         env:
           TST: fromJSON(steps.test.results)
         run: |
-          echo "::notice :: ${{ TST.numTotalTests }} tests, ${{ TST.numPassedTests }} passed, ${{ TST.numFailedTests }} [ ${{ TST.numTodoTests }} todos, ${{ TST.numPendingTests }} pending ]"
+          echo "::notice :: $TST.numTotalTests tests, $TST.numPassedTests passed, $TST.numFailedTests [ $TST.numTodoTests todos, $TST.numPendingTests  pending ]"
 
   lint:
     name: lint

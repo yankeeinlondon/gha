@@ -116,7 +116,7 @@ jobs:
       - name: Build
         run: nr build
       - name: Test
-        run: nx
+        run: pnpm test
 
   complete:
     name: complete

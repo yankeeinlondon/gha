@@ -80,6 +80,7 @@ jobs:
           echo "Steps: ${{ toJSON(steps) }}"
           echo "Runner: ${{ toJSON(runner) }}"
           echo "::endgroup::"
+          echo "::notice:: ${{github.actor}} has triggered CI"
       - name: Checkout Code
         uses: actions/checkout@v3
       - name: Setup
@@ -128,4 +129,4 @@ jobs:
       - name: Success
         run: |
           echo ":rocket: tests run successfully"
-          echo "::notice status=success::Tests and Linting completed successfully.\nThe changes in this commit versus last can be found at: ${{ github.event.compare }}"
+          echo "::notice status=success::Tests and Linting completed successfully. The changes in this commit versus last can be found at: ${{ github.event.compare }}"

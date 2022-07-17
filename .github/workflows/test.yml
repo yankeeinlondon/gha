@@ -45,6 +45,7 @@ jobs:
       - name: Test
         run: |
           results=`${{ inputs.metricsCommand }}`
+          echo "::notice :: ${{ results.numTotalTests }} tests, ${{ results.numPassedTests }} passed, ${{ results.numFailedTests }} [ ${{ results.numTodoTests }} todos, ${{ results.numPendingTests }} pending ]"
 
   lint:
     name: lint
@@ -110,16 +111,7 @@ jobs:
       - name: Build
         run: nr build
       - name: Test
-        env:
-          TEST_CMD: |
-            import { spawnSync } from "child_process";
-            let thread = spawnSync('npx', ['vitest', 'run', '--passWithNoTests', '--reporter', 'json']);
-            let results = thread.stdout.toString();
-            console.log("results:", results);
-
-        run: |
-          echo "OS: ${{matrix.os}}"
-          `npx run vitest --passWithNoTests --reporter json`
+        run: nx
 
   complete:
     name: complete

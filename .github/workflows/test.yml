@@ -118,8 +118,8 @@ jobs:
             console.log("results:", results);
 
         run: |
-          echo "OS: $matrix.os"
-          npx run vitest --passWithNoTests --reporter json 2>&1
+          echo "OS: ${{matrix.os}}"
+          `npx run vitest --passWithNoTests --reporter json`
 
   complete:
     name: complete

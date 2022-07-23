@@ -1,6 +1,6 @@
 {
   "name": "gh-npm-release",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
   "scripts": {
     "test": "vitest --passWithNoTests",

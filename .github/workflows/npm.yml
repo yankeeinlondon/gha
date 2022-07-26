@@ -29,6 +29,8 @@ jobs:
   ready:
     env:
       HAS_TOKEN: ${{ github.events.inputs.input.npm_token }} != '' }} || ${{ secrets.npm_token != '' }}
+      TOKEN_FROM_INPUT: ${{ github.events.inputs.input.npm_token }} != '' }}
+      TOKEN_FROM_SECRET: ${{ secrets.npm_token != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Not Authorized
@@ -39,8 +41,13 @@ jobs:
         if: ${{ env.HAS_TOKEN == 'false' }}
         uses: andymckay/cancel-action@0.2
       - name: Token identified
+        if: ${{ env.TOKEN_FROM_INPUT == 'true' }}
         run: |
-          echo "::notice:: an NPM_TOKEN was provided so start publishing process"
+          echo "::notice:: an NPM_TOKEN was manually via workflow_dispatch so start publishing process"
+      - name: Token identified
+        if: ${{ env.TOKEN_FROM_SECRET == 'true' }}
+        run: |
+          echo "::notice:: an NPM_TOKEN was provided via a Github secret so start publishing process"
 
   publish:
     runs-on: ubuntu-latest

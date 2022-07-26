@@ -28,15 +28,15 @@ on:
 jobs:
   ready:
     env:
-      HAS_TOKEN: ${{ github.events.inputs.input.npm_token }} != "" || ${{ secrets.npm_token != "" }}
+      HAS_TOKEN: ${{ github.events.inputs.input.npm_token }} != "" }} || ${{ secrets.npm_token != "" }}
     runs-on: ubuntu-latest
     steps:
       - name: Not Authorized
-        if: ${{ env.HAS_TOKEN != 'true' }}
+        if: ${{ env.HAS_TOKEN == 'false' }}
         run: |
           echo "::notice:: attempt to publish to NPM failed because NPM_TOKEN was not provided as a secret!"
       - name: Cancel
-        if: ${{ env.HAS_TOKEN != 'true' }}
+        if: ${{ env.HAS_TOKEN == 'false' }}
         uses: andymckay/cancel-action@0.2
       - name: Token identified
         run: |

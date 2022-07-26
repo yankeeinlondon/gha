@@ -24,21 +24,23 @@ on:
     secrets:
       npm_token:
         required: true
-    env:
-      HAS_TOKEN: ${{ secrets.npm_token != "" }}
 
 jobs:
   ready:
     env:
       HAS_TOKEN: ${{ input.npm_token != "" || secrets.npm_token != "" }}
     runs-on: ubuntu-latest
-    if: ${{ env.HAS_TOKEN != 'true' }}
     steps:
       - name: Not Authorized
+        if: ${{ env.HAS_TOKEN != 'true' }}
         run: |
           echo "::notice:: attempt to publish to NPM failed because NPM_TOKEN was not provided as a secret!"
       - name: Cancel
+        if: ${{ env.HAS_TOKEN != 'true' }}
         uses: andymckay/cancel-action@0.2
+      - name: Token identified
+        run: |
+          echo "::notice:: an NPM_TOKEN was provided so start publishing process"
 
   publish:
     runs-on: ubuntu-latest

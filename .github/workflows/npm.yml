@@ -1,6 +1,17 @@
 name: NPM Publish
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: choose the NPM version you want to release
+        required: true
+      npm_token:
+        description: add your NPM_TOKEN which has "publish" permissions
+        required: true
+    env:
+      HAS_TOKEN: ${{ github.event.inputs.input.npm_token != "" }}
+
   workflow_call:
     inputs:
       nodeVersion:
@@ -15,13 +26,15 @@ on:
     secrets:
       npm_token:
         required: true
+    env:
+      HAS_TOKEN: ${{ secrets.npm_token != "" }}
 
 jobs:
   ready:
     runs-on: ubuntu-latest
+    if: ${{ env.HAS_TOKEN != 'true' }}
     steps:
-      - if: ${{secrets.npm_token}} == ""
-        name: Not Authorized
+      - name: Not Authorized
         run: |
           echo "::notice:: attempt to publish to NPM failed because NPM_TOKEN was not provided as a secret!"
       - name: Cancel
@@ -50,7 +63,7 @@ jobs:
       - name: Publish to NPM
         run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+          NODE_AUTH_TOKEN: ${{secrets.npm_token || github.event.inputs.npm_token}}
       - name: Create Changelog Entry
         run: npx changelogithub
         env:

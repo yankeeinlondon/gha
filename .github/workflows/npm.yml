@@ -28,7 +28,7 @@ on:
 jobs:
   ready:
     env:
-      HAS_TOKEN: ${{ github.events.inputs.input.npm_token }} != "" }} || ${{ secrets.npm_token != "" }}
+      HAS_TOKEN: ${{ github.events.inputs.input.npm_token }} != '' }} || ${{ secrets.npm_token != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Not Authorized

@@ -17,8 +17,19 @@ on:
         required: true
 
 jobs:
+  ready:
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{secrets.npm_token}} == ""
+        name: Not Authorized
+        run: |
+          echo "::notice:: attempt to publish to NPM failed because NPM_TOKEN was not provided as a secret!"
+      - name: Cancel
+        uses: andymckay/cancel-action@0.2
+
   publish:
     runs-on: ubuntu-latest
+    needs: ready
 
     steps:
       - name: Checkout

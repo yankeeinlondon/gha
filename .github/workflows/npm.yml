@@ -9,8 +9,6 @@ on:
       npm_token:
         description: add your NPM_TOKEN which has "publish" permissions
         required: true
-    env:
-      HAS_TOKEN: ${{ github.event.inputs.input.npm_token != "" }}
 
   workflow_call:
     inputs:
@@ -31,6 +29,8 @@ on:
 
 jobs:
   ready:
+    env:
+      HAS_TOKEN: ${{ input.npm_token != "" || secrets.npm_token != "" }}
     runs-on: ubuntu-latest
     if: ${{ env.HAS_TOKEN != 'true' }}
     steps:

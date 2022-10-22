@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: 16
       - name: Setup
-        run: npm i -g pnpm@7.5.2 @antfu/ni
+        run: npm i -g pnpm@7 @antfu/ni
       - name: Install
         run: pnpm install
       - name: Build
@@ -110,7 +110,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Setup
-        run: npm i -g pnpm@7.5.2 @antfu/ni
+        run: npm i -g pnpm@7 @antfu/ni
       - name: Install
         run: pnpm install
       - name: Build

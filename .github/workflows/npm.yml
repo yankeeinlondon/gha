@@ -64,7 +64,7 @@ jobs:
           node-version: ${{ inputs.nodeVersion }}
           registry-url: https://registry.npmjs.org/
       - name: Install pnpm
-        run: npm i -g pnpm@7 @antfu/ni
+        run: npm i -g pnpm @antfu/ni
       - name: Clean Install
         run: pnpm install
       - name: Build

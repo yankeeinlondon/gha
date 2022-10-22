@@ -64,7 +64,7 @@ jobs:
           node-version: ${{ inputs.nodeVersion }}
           registry-url: https://registry.npmjs.org/
       - name: Install pnpm
-        run: npm i -g pnpm@7.5.2 @antfu/ni
+        run: npm i -g pnpm@7 @antfu/ni
       - name: Clean Install
         run: pnpm install
       - name: Build
@@ -79,4 +79,4 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Done
         run: |
-          echo "::notice :: ${{ github.actor }} published from ${{github.ref_type}} ${{ github.ref_name }}} to NPM and updated the repo's changelog entry 🚀"
+          echo "::notice :: ${{ github.actor }} published from ${{github.ref_type}} ${{ github.ref_name }} to NPM and updated the repo's changelog entry 🚀"

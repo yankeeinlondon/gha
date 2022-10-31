@@ -61,7 +61,7 @@ jobs:
     steps:
       - name: ENV vars
         run: |
-          echo "::notice:: GH_TOKEN and VITE_GH_TOKEN are ${{ env.GH_TOKEN == \"\" ? \"not\" : ""}} available.
+          echo "::notice:: GH_TOKEN and VITE_GH_TOKEN are ${{ env.GH_TOKEN == "" ? "not" : ""}} available.
       - uses: actions/checkout@v3
       - name: Setup Node
         uses: actions/setup-node@v3

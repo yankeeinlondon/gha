@@ -42,6 +42,16 @@ on:
         default: ""
         required: false
 
+    secrets:
+      gh_token:
+        required: false
+      bitbucket_token:
+        required: false
+      gitlab_token:
+        required: false
+      api_token:
+        required: false
+
 jobs:
   metrics:
     name: metrics

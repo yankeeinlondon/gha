@@ -13,3 +13,8 @@ on:
 jobs:
   testing:
     uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+    secrets:
+      api_token: ${{secrets.API_TOKEN}}
+      gh_token: ${{secrets.GH_TOKEN}}
+      bitbucket_token: ${{secrets.BITBUCKET_TOKEN}}
+      gitlab_token: ${{secrets.GITLAB_TOKEN}}

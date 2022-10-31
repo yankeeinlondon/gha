@@ -23,6 +23,18 @@ on:
         type: string
         default: "pnpm test:metrics"
         required: false
+      gh_token:
+        type: string
+        default: ""
+        required: false
+      bitbucket_token:
+        type: string
+        default: ""
+        required: false
+      gitlab_token:
+        type: string
+        default: ""
+        required: false
 
 jobs:
   metrics:
@@ -96,6 +108,13 @@ jobs:
   test:
     name: test
     runs-on: ${{ matrix.os }}
+    env:
+      VITE_GH_TOKEN: ${{ secrets.gh_token }}
+      GH_TOKEN: ${{ secrets.gh_token }}
+      VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      GITLAB_TOKEN: ${{ secrets.gitlab_token }}
     strategy:
       matrix:
         node-version: ${{ fromJSON(inputs.nodeVersions) }}

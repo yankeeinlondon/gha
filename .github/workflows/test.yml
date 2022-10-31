@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Github Token
-        if: ${{ env.GH_TOKEN != "" }}
+        if: ${{ env.GH_TOKEN != '' }}
         run: |
           echo "::notice:: GH_TOKEN and VITE_GH_TOKEN are available for testing."
       - uses: actions/checkout@v3

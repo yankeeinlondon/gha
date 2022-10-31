@@ -59,9 +59,10 @@ jobs:
     if: ${{ inputs.metrics }}
 
     steps:
-      - name: ENV vars
+      - name: Github Token
+        if: ${{ env.GH_TOKEN != "" }}
         run: |
-          echo "::notice:: GH_TOKEN and VITE_GH_TOKEN are ${{ env.GH_TOKEN == '' ? 'not ' : ''}}available."
+          echo "::notice:: GH_TOKEN and VITE_GH_TOKEN are available for testing."
       - uses: actions/checkout@v3
       - name: Setup Node
         uses: actions/setup-node@v3

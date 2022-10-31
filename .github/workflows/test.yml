@@ -121,6 +121,8 @@ jobs:
       BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
       VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
       GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      API_TOKEN: ${{ secrets.api_token }}
+      VITE_API_TOKEN: ${{ secrets.api_token }}
     strategy:
       matrix:
         node-version: ${{ fromJSON(inputs.nodeVersions) }}

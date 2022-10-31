@@ -59,11 +59,13 @@ jobs:
     if: ${{ inputs.metrics }}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Github Token in ENV
+        if: ${{ secrets.gh_token }}
+        run: |
+          echo "::notice:: testing will have the benefit of having the VITE_GH_TOKEN and GH_TOKEN env vars set"
+      - uses: actions/checkout@v3
       - name: Setup Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: 16
+        uses: actions/setup-node@v3
       - name: Setup
         run: npm i -g pnpm @antfu/ni
       - name: Install
@@ -141,9 +143,9 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
       - name: Setup

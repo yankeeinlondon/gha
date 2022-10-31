@@ -21,6 +21,9 @@ jobs:
       nodeVersion: 16
     secrets:
       npm_token: ${{secrets.NPM_TOKEN}}
+      VITE_GH_TOKEN: ${{secrets.GH_TOKEN}}
+      VITE_BITBUCKET_TOKEN: ${{secrets.BITBUCKET_TOKEN}}
+      VITE_GITLAB_TOKEN: ${{secrets.GITLAB_TOKEN}}
 
   do_not_publish:
     name: npm / no publication

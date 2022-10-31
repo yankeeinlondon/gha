@@ -23,7 +23,13 @@ on:
         type: string
         default: "pnpm test:metrics"
         required: false
+      api_token:
+        type: string
+        description: "allows an API token to be passed to testing as API_TOKEN and VITE_API_TOKEN"
+        default: ""
+        required: false
       gh_token:
+        description: "allows a Github personal access token to be passed to testing as GH_TOKEN and VITE_GH_TOKEN"
         type: string
         default: ""
         required: false

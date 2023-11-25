@@ -1,6 +1,6 @@
 {
   "name": "gh-npm-release",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
   "scripts": {
     "test": "vitest --passWithNoTests",
@@ -32,7 +32,12 @@
   "pnpm": {
     "overrides": {
       "xmlhttprequest@<1.7.0": ">=1.7.0",
-      "jsdom@<=16.4.0": ">=16.5.0"
+      "jsdom@<=16.4.0": ">=16.5.0",
+      "postcss@<8.4.31": ">=8.4.31",
+      "semver@<5.7.2": ">=5.7.2",
+      "tough-cookie@<4.1.3": ">=4.1.3",
+      "vite@>=3.0.2 <3.2.7": ">=3.2.7",
+      "word-wrap@<1.2.4": ">=1.2.4"
     }
   }
 }

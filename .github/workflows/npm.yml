@@ -14,7 +14,7 @@ on:
     inputs:
       nodeVersion:
         type: number
-        default: 16
+        default: 18
         required: false
       private:
         type: boolean

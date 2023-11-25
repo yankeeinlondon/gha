@@ -9,7 +9,7 @@ on:
         required: false
       nodeVersions:
         type: string
-        default: '["14.x", "16.x"]'
+        default: '["18.x", "20.x"]'
         required: false
       failFast:
         type: boolean

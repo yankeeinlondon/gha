@@ -75,9 +75,9 @@ jobs:
         if: ${{ env.GITLAB_TOKENs != '' }}
         run: |
           echo "::notice:: GITLAB_TOKENs and VITE_GITLAB_TOKENs env variables are available for testing."
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
       - name: Setup
         run: npm i -g pnpm @antfu/ni
       - name: Install
@@ -124,7 +124,7 @@ jobs:
           echo "::endgroup::"
           echo "::notice:: ${{github.actor}} has triggered CI"
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup
         run: npm i -g pnpm @antfu/ni
       - name: Clean Install
@@ -133,7 +133,7 @@ jobs:
         run: nr lint --if-present
       - name: Cancel Workflow
         if: failure()
-        uses: andymckay/cancel-action@0.2
+        uses: andymckay/cancel-action@0.4
 
   test:
     name: test
@@ -155,9 +155,9 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - name: Setup

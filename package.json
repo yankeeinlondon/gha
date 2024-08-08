@@ -24,7 +24,7 @@
   "homepage": "https://github.com/yankeeinlondon/gha#readme",
   "devDependencies": {
     "@vitest/ui": "^1.6.0",
-    "bumpp": "^9.4.1",
+    "bumpp": "^9.4.2",
     "jq": "^1.7.2",
     "npm-run-all": "^4.1.5",
     "vitest": "^1.6.0"

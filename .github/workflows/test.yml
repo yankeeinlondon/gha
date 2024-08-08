@@ -9,7 +9,7 @@ on:
         required: false
       nodeVersions:
         type: string
-        default: '["18.x", "20.x"]'
+        default: '["20.x", "22.x"]'
         required: false
       failFast:
         type: boolean
@@ -75,6 +75,23 @@ jobs:
         if: ${{ env.GITLAB_TOKENs != '' }}
         run: |
           echo "::notice:: GITLAB_TOKENs and VITE_GITLAB_TOKENs env variables are available for testing."
+      - name: ENV Flag for Windows
+        if: ${{ runner.os != 'Windows' }}
+        env: 
+          IS_WINDOWS: |
+            if [ "$runner.os" == "Windows" ]; then
+            true
+            else
+            false
+            fi
+        run: |
+          if [ "$runner.os" == "Windows" ]; then
+            echo "IS_RUNNING=true"
+          else
+            echo "IS_RUNNING=false"
+          fi  
+  
+
       - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -121,6 +138,7 @@ jobs:
           echo "Job: ${{ toJSON(job) }}"
           echo "Steps: ${{ toJSON(steps) }}"
           echo "Runner: ${{ toJSON(runner) }}"
+          echo "Is Windows: ${{env.IS_WINDOWS}}"
           echo "::endgroup::"
           echo "::notice:: ${{github.actor}} has triggered CI"
       - name: Checkout Code

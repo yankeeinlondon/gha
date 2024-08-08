@@ -23,7 +23,7 @@ jobs:
       - testing
     uses: yankeeinlondon/gha/.github/workflows/npm.yml@main
     with:
-      nodeVersion: 18
+      nodeVersion: 20
     secrets:
       npm_token: ${{secrets.NPM_TOKEN}}
 

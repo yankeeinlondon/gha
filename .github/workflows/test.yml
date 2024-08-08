@@ -76,20 +76,11 @@ jobs:
         run: |
           echo "::notice:: GITLAB_TOKENs and VITE_GITLAB_TOKENs env variables are available for testing."
       - name: ENV Flag for Windows
-        if: ${{ runner.os != 'Windows' }}
         env: 
-          IS_WINDOWS: |
-            if [ "$runner.os" == "Windows" ]; then
-            true
-            else
-            false
-            fi
+          OS: $RUNNER_OS
         run: |
-          if [ "$runner.os" == "Windows" ]; then
-            echo "IS_RUNNING=true"
-          else
-            echo "IS_RUNNING=false"
-          fi  
+          echo "OS=${RUNNER_OS}"
+            
   
 
       - uses: actions/checkout@v4
@@ -165,6 +156,7 @@ jobs:
       GITLAB_TOKEN: ${{ secrets.gitlab_token }}
       API_TOKEN: ${{ secrets.api_token }}
       VITE_API_TOKEN: ${{ secrets.api_token }}
+      OS: $RUNNER_OS
     strategy:
       matrix:
         node-version: ${{ fromJSON(inputs.nodeVersions) }}

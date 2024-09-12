@@ -129,7 +129,7 @@ jobs:
           echo "Job: ${{ toJSON(job) }}"
           echo "Steps: ${{ toJSON(steps) }}"
           echo "Runner: ${{ toJSON(runner) }}"
-          echo "Is Windows: ${{env.IS_WINDOWS}}"
+          echo "OS: ${RUNNER_OS}"
           echo "::endgroup::"
           echo "::notice:: ${{github.actor}} has triggered CI"
       - name: Checkout Code

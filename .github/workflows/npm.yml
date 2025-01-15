@@ -9,6 +9,10 @@ on:
       npm_token:
         description: add your NPM_TOKEN which has "publish" permissions
         required: true
+      bun:
+        type: boolean
+        default: false
+        required: false
 
   workflow_call:
     inputs:
@@ -28,8 +32,8 @@ on:
 jobs:
   ready:
     env:
-      HAS_TOKEN: ${{ github.events.inputs.input.npm_token }} != '' }} || ${{ secrets.npm_token != '' }}
-      TOKEN_FROM_INPUT: ${{ github.events.inputs.input.npm_token }} != '' }}
+      HAS_TOKEN: inputs.input.npm_token != '' || ${{ secrets.npm_token != '' }}
+      TOKEN_FROM_INPUT: inputs.input.npm_token != ''
       TOKEN_FROM_SECRET: ${{ secrets.npm_token != '' }}
     runs-on: ubuntu-latest
     steps:
@@ -58,6 +62,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        if: inputs.bun
+      - name: Bun Install
+        run: bun install
+        if: inputs.bun
+      - name: Bun Builder
+        run: bun run build
+        if: inputs.bun          
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

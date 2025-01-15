@@ -41,6 +41,10 @@ on:
         type: string
         default: ""
         required: false
+      bun:
+        type: string
+        default: ""
+        required: false
 
     secrets:
       gh_token:
@@ -72,16 +76,18 @@ jobs:
         run: |
           echo "::notice:: BITBUCKET_TOKEN and VITE_BITBUCKET_TOKEN env variables are available for testing."
       - name: Gitlab Token
-        if: ${{ env.GITLAB_TOKENs != '' }}
+        if: ${{ env.GITLAB_TOKEN != '' }}
         run: |
           echo "::notice:: GITLAB_TOKENs and VITE_GITLAB_TOKENs env variables are available for testing."
+      - name: Bun
+        if: inputs.bun
+        uses: oven-sh/setup-bun@v2
+        
       - name: ENV Flag for Windows
         env: 
           OS: $RUNNER_OS
         run: |
           echo "OS=${RUNNER_OS}"
-            
-  
 
       - uses: actions/checkout@v4
       - name: Setup Node

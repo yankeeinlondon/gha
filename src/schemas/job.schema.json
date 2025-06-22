@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/actions/job-schema",
+  "title": "GitHub Actions Job Schema",
+  "description": "Schema for GitHub Actions job definitions",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name for the job"
+    },
+    "needs": {
+      "description": "Jobs that must complete successfully before this job runs",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "runs-on": {
+      "description": "The type of runner that the job will run on",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } },
+        {
+          "type": "object",
+          "properties": {
+            "group": { "type": "string" },
+            "labels": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string" } }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "permissions": {
+      "description": "Permissions for the job",
+      "oneOf": [
+        { "type": "string", "enum": ["read-all", "write-all"] },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["read", "write", "none"]
+          }
+        }
+      ]
+    },
+    "environment": {
+      "description": "The environment that the job references",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "url": { "type": "string" }
+          },
+          "required": ["name"]
+        }
+      ]
+    },
+    "concurrency": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "group": { "type": "string" },
+            "cancel-in-progress": { "type": "boolean" }
+          },
+          "required": ["group"]
+        }
+      ]
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Map of outputs for the job",
+      "additionalProperties": { "type": "string" }
+    },
+    "env": {
+      "type": "object",
+      "description": "Environment variables available to all steps in the job",
+      "additionalProperties": { "type": "string" }
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "type": "object",
+          "properties": {
+            "shell": { "type": "string" },
+            "working-directory": { "type": "string" }
+          }
+        }
+      }
+    },
+    "if": {
+      "type": "string",
+      "description": "Conditional expression to determine if the job should run"
+    },
+    "steps": {
+      "type": "array",
+      "description": "A list of steps to run as part of the job",
+      "items": {
+        "$ref": "step.schema.json"
+      },
+      "minItems": 1
+    },
+    "timeout-minutes": {
+      "type": "number",
+      "description": "The maximum number of minutes to let a job run"
+    },
+    "strategy": {
+      "type": "object",
+      "properties": {
+        "matrix": {
+          "type": "object",
+          "properties": {
+            "include": { "type": "array" },
+            "exclude": { "type": "array" }
+          },
+          "additionalProperties": {
+            "type": "array"
+          }
+        },
+        "fail-fast": { "type": "boolean" },
+        "max-parallel": { "type": "number" }
+      }
+    },
+    "continue-on-error": {
+      "type": "boolean",
+      "description": "Prevents a workflow run from failing when a job fails"
+    },
+    "container": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "image": { "type": "string" },
+            "credentials": {
+              "type": "object",
+              "properties": {
+                "username": { "type": "string" },
+                "password": { "type": "string" }
+              }
+            },
+            "env": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "ports": {
+              "type": "array",
+              "items": { "type": "number" }
+            },
+            "volumes": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "options": { "type": "string" }
+          },
+          "required": ["image"]
+        }
+      ]
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "properties": {
+              "image": { "type": "string" },
+              "credentials": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              },
+              "ports": {
+                "type": "array",
+                "items": { "type": "number" }
+              },
+              "volumes": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "options": { "type": "string" }
+            },
+            "required": ["image"]
+          }
+        ]
+      }
+    },
+    "uses": {
+      "type": "string",
+      "description": "Location of a reusable workflow file"
+    },
+    "with": {
+      "type": "object",
+      "description": "Input parameters for reusable workflows",
+      "additionalProperties": true
+    },
+    "secrets": {
+      "oneOf": [
+        { "type": "string", "const": "inherit" },
+        {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "required": ["steps"] },
+    { "required": ["uses"] }
+  ],
+  "additionalProperties": false
+}

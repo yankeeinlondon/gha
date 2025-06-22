@@ -1,0 +1,230 @@
+# Security Scan Workflow
+# This example demonstrates using step templates for security scanning
+# In the modular system, templates would be referenced with special comments
+
+name: Security Scan
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Monday
+  workflow_dispatch:
+
+jobs:
+  # Code scanning with multiple tools
+  code-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      # @extends: steps/checkout.yml
+      # @with:
+      #   fetch-depth: 0  # Full history for better scanning
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # @extends: steps/setup-node.yml
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+      
+      # Dependency vulnerability scanning
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      # @extends: steps/security/snyk.yml
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+      
+      # @extends: steps/security/codeql.yml
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, typescript
+          queries: security-and-quality
+      
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+      
+      # SAST with Semgrep
+      # @extends: steps/security/semgrep.yml
+      - name: Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/typescript
+            p/javascript
+        continue-on-error: true
+
+  # Container scanning for Docker images
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[docker]') || github.event_name == 'schedule'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      # @extends: steps/checkout.yml
+      - uses: actions/checkout@v4
+      
+      # Build Docker image
+      - name: Build Docker image
+        run: docker build -t ${{ github.repository }}:${{ github.sha }} .
+      
+      # @extends: steps/security/trivy.yml
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ github.repository }}:${{ github.sha }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      # @extends: steps/security/docker-scout.yml
+      - name: Docker Scout CVEs
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: '${{ github.repository }}:${{ github.sha }}'
+          only-severities: critical,high
+          exit-code: true
+
+  # License compliance scanning
+  license-scan:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      # @extends: steps/checkout.yml
+      - uses: actions/checkout@v4
+      
+      # @extends: steps/security/license-checker.yml
+      - name: License Checker
+        uses: fossa-contrib/fossa-action@v3
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          
+      - name: Check allowed licenses
+        run: |
+          npx license-checker --onlyAllow 'MIT;Apache-2.0;BSD-3-Clause;BSD-2-Clause;ISC;CC0-1.0'
+
+  # Secret scanning
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      # @extends: steps/checkout.yml
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # @extends: steps/security/gitleaks.yml
+      - name: Detect secrets with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # @extends: steps/security/trufflehog.yml  
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # Infrastructure as Code scanning
+  iac-scan:
+    name: IaC Security Scan
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[terraform]') || contains(github.event.head_commit.message, '[iac]')
+    steps:
+      # @extends: steps/checkout.yml
+      - uses: actions/checkout@v4
+      
+      # @extends: steps/security/checkov.yml
+      - name: Run Checkov action
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: all
+          output_format: sarif
+          output_file_path: checkov.sarif
+          skip_check: CKV_DOCKER_2,CKV_DOCKER_3
+      
+      - name: Upload Checkov scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov.sarif
+
+  # Security report summary
+  security-report:
+    name: Security Report
+    runs-on: ubuntu-latest
+    needs: [code-scan, container-scan, license-scan, secret-scan]
+    if: always()
+    steps:
+      # @extends: steps/checkout.yml
+      - uses: actions/checkout@v4
+      
+      - name: Generate Security Report
+        run: |
+          echo "# Security Scan Report" > security-report.md
+          echo "Date: $(date)" >> security-report.md
+          echo "Commit: ${{ github.sha }}" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Add job status
+          echo "## Scan Results" >> security-report.md
+          echo "- Code Scan: ${{ needs.code-scan.result }}" >> security-report.md
+          echo "- Container Scan: ${{ needs.container-scan.result }}" >> security-report.md
+          echo "- License Scan: ${{ needs.license-scan.result }}" >> security-report.md
+          echo "- Secret Scan: ${{ needs.secret-scan.result }}" >> security-report.md
+      
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+          retention-days: 30
+      
+      # Post comment on PR
+      - name: Comment PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const report = require('fs').readFileSync('security-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });

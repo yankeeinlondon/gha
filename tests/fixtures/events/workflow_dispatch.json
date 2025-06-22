@@ -1,0 +1,17 @@
+{
+  "inputs": {
+    "version": "1.0.0",
+    "environment": "production"
+  },
+  "ref": "refs/heads/main",
+  "repository": {
+    "id": 123456789,
+    "name": "test-repo",
+    "full_name": "test-owner/test-repo",
+    "owner": {
+      "login": "test-owner",
+      "id": 12345
+    }
+  },
+  "workflow": ".github/workflows/deploy.yml"
+}

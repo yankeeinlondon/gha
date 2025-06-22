@@ -4,7 +4,14 @@
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
   "scripts": {
     "test": "vitest --passWithNoTests",
+    "test:workflows": "vitest run tests/workflows --passWithNoTests",
     "build": "echo no build script needed",
+    "build:workflows": "tsx src/builders/cli.ts build",
+    "build:watch": "tsx src/builders/cli watch",
+    "build:actions": "tsx src/builders/cli build --type action --output .github/actions",
+    "validate:templates": "node src/builders/cli.js validate",
+    "init:template": "node src/builders/cli.js generate",
+    "list:templates": "node src/builders/cli.js list",
     "audit:fix": "pnpm audit --fix && pnpm install",
     "release": "run-s audit:fix release:bump",
     "release:bump": "bumpp"
@@ -25,6 +32,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^4.15.0",
     "@type-challenges/utils": "^0.1.1",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "22",
     "@vitest/ui": "^3.2.4",
     "bumpp": "^10.2.0",
@@ -33,7 +41,10 @@
     "husky": "^9.1.7",
     "jiti": "^2.4.2",
     "jq": "^1.7.2",
+    "js-yaml": "^4.1.0",
+    "json-schema-to-typescript": "^15.0.0",
     "npm-run-all": "^4.1.5",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   },
@@ -50,5 +61,17 @@
       "vite@>=5.0.0 <=5.0.11": ">=5.0.12",
       "micromatch@<4.0.8": ">=4.0.8"
     }
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "chokidar": "^4.0.3",
+    "commander": "^14.0.0",
+    "diff": "^7.0.0",
+    "yaml": "^2.6.1"
+  },
+  "optionalDependencies": {
+    "@oclif/plugin-not-found": "^3.2.31",
+    "act": "^1.6.2"
   }
 }

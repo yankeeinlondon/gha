@@ -1,5 +1,51 @@
 {
-    "cSpell.words": [
-        "andymckay"
+  "yaml.schemas": {
+    "./src/schemas/workflow.schema.json": [
+      "src/templates/workflows/*.yml",
+      "src/templates/workflows/*.yaml",
+      ".github/workflows/*.yml",
+      ".github/workflows/*.yaml"
+    ],
+    "./src/schemas/job.schema.json": [
+      "src/templates/jobs/*.yml",
+      "src/templates/jobs/*.yaml"
+    ],
+    "./src/schemas/step.schema.json": [
+      "src/templates/steps/*.yml",
+      "src/templates/steps/*.yaml"
+    ],
+    "./src/schemas/inputs/workflow-inputs.schema.json": [
+      "src/templates/workflows/inputs/*.yml",
+      "src/templates/workflows/inputs/*.yaml"
+    ],
+    "./src/schemas/outputs/job-outputs.schema.json": [
+      "src/templates/jobs/outputs/*.yml",
+      "src/templates/jobs/outputs/*.yaml"
     ]
+  },
+  "yaml.customTags": [
+    "!ref scalar",
+    "!include scalar",
+    "!template scalar",
+    "!input scalar",
+    "!output scalar"
+  ],
+  "files.associations": {
+    "*.workflow.yml": "yaml",
+    "*.workflow.yaml": "yaml",
+    "*.job.yml": "yaml",
+    "*.job.yaml": "yaml",
+    "*.step.yml": "yaml",
+    "*.step.yaml": "yaml"
+  },
+  "[yaml]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.autoIndent": "keep",
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": true
+    }
+  }
 }

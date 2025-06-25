@@ -20,6 +20,10 @@ export default defineConfig({
       "src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
     ],
     exclude: ["**/node_modules/**", "**/dist/**", "**/cypress/**", "**/.{idea,git,cache,output,temp}/**"],
+    
+    // Global setup for dependency detection
+    globalSetup: ['./tests/utils/global-setup.ts'],
+    
     coverage: {
       reporter: ["text", "json", "html"],
       exclude: [
@@ -41,19 +45,26 @@ export default defineConfig({
         "**/.{eslint,mocha,prettier}rc.{?(c|m)js,yml}",
       ],
     },
+    
     // Workflow testing specific configuration
-    testTimeout: 30000, // 30 seconds for workflow tests
-    hookTimeout: 10000, // 10 seconds for setup/teardown
+    testTimeout: 60000, // 60 seconds for Tier 3 container tests
+    hookTimeout: 15000, // 15 seconds for setup/teardown
     pool: "forks", // Use forks for better isolation when testing workflows
     poolOptions: {
       forks: {
         singleFork: false,
       },
     },
+    
     // Environment variables for workflow testing
     env: {
       NODE_ENV: "test",
       GITHUB_ACTIONS: "false", // Disable GitHub Actions specific behavior in tests
+      TEST_TIER_1_ONLY: process.env.CI === 'true' && !process.env.ACT_AVAILABLE ? 'true' : 'false'
     },
+    
+    // Separate configurations for different test tiers
+    // This can be overridden via CLI: vitest run tests/static
+    setupFiles: ['./tests/utils/test-setup.ts']
   },
 });

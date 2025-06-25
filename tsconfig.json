@@ -18,11 +18,11 @@
     "skipLibCheck": true,
 
     "paths": {
-      "~/*": [ "src/*"]
+      "~/*": [ "old-src/*"]
     }
   },
   "include": [
-    "src",
+    "old-src",
     "tests",
   ],
   "exclude": [

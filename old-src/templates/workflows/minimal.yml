@@ -1,0 +1,9 @@
+name: Minimal Workflow
+on:
+  workflow_dispatch:
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo Hello
+        run: echo "Hello, world!"

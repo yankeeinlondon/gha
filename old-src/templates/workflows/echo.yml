@@ -1,0 +1,9 @@
+name: Echo Workflow
+on:
+  workflow_dispatch:
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo
+        run: echo "test"

@@ -1,20 +1,20 @@
 {
-  "name": "gh-npm-release",
+  "name": "@yankeeinlondon/gha",
   "version": "0.5.3",
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
+  "type": "module",
+  "bin": {
+    "gha": "./dist/gha.js"
+  },
+  "module": "./dist/index.js",
   "scripts": {
-    "test": "vitest --passWithNoTests",
-    "test:workflows": "vitest run tests/workflows --passWithNoTests",
-    "build": "echo no build script needed",
-    "build:workflows": "tsx src/builders/cli.ts build",
-    "build:watch": "tsx src/builders/cli watch",
-    "build:actions": "tsx src/builders/cli build --type action --output .github/actions",
-    "validate:templates": "node src/builders/cli.js validate",
-    "init:template": "node src/builders/cli.js generate",
-    "list:templates": "node src/builders/cli.js list",
-    "audit:fix": "pnpm audit --fix && pnpm install",
-    "release": "run-s audit:fix release:bump",
-    "release:bump": "bumpp"
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "run-p build:*",
+    "build:symbols": "tsdown src/index.ts --format=esm --dts",
+    "build:cli": "tsdown src/gha.ts --format=esm",
+    "release": "bumpp"
   },
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "github-actions"
   ],
   "author": "Ken Snyder <ken@ken.net>",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/yankeeinlondon/gha/issues"
   },
@@ -32,18 +32,22 @@
   "devDependencies": {
     "@antfu/eslint-config": "^4.15.0",
     "@type-challenges/utils": "^0.1.1",
+    "@types/diff": "^8.0.0",
+    "@types/glob": "^8.1.0",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "22",
+    "@types/node": "^22.15.32",
     "@vitest/ui": "^3.2.4",
     "bumpp": "^10.2.0",
     "eslint": "^9.29.0",
     "eslint-plugin-format": "^1.0.1",
+    "glob": "^11.0.3",
     "husky": "^9.1.7",
     "jiti": "^2.4.2",
     "jq": "^1.7.2",
     "js-yaml": "^4.1.0",
     "json-schema-to-typescript": "^15.0.0",
     "npm-run-all": "^4.1.5",
+    "tsdown": "^0.12.8",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
@@ -63,15 +67,16 @@
     }
   },
   "dependencies": {
+    "@types/json-schema": "^7.0.15",
+    "@yankeeinlondon/gotcha": "^0.1.6",
+    "@yankeeinlondon/kind-error": "^1.4.1",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "chalk": "^5.4.1",
     "chokidar": "^4.0.3",
     "commander": "^14.0.0",
     "diff": "^7.0.0",
+    "inferred-types": "^0.55.23",
     "yaml": "^2.6.1"
-  },
-  "optionalDependencies": {
-    "@oclif/plugin-not-found": "^3.2.31",
-    "act": "^1.6.2"
   }
 }

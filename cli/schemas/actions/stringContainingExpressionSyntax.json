@@ -1,0 +1,1 @@
+{"$comment":"escape `{` and `}` in pattern to be unicode compatible (#1360)","type":"string","pattern":"^.*\\$\\{\\{(.|[\r\n])*\\}\\}.*$"}

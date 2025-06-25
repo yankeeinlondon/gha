@@ -1,0 +1,1 @@
+{"type":"object","properties":{"run":{"type":"object","properties":{"shell":{"$ref":"#/definitions/shell"},"working-directory":{"$ref":"#/definitions/working-directory"}},"minProperties":1,"additionalProperties":false}},"minProperties":1,"additionalProperties":false}

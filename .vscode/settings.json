@@ -1,28 +1,30 @@
 {
   "yaml.schemas": {
     "./src/schemas/workflow.schema.json": [
-      "src/templates/workflows/*.yml",
-      "src/templates/workflows/*.yaml",
-      ".github/workflows/*.yml",
-      ".github/workflows/*.yaml"
+        "src/templates/workflows/*.yml",
+        "src/templates/workflows/*.yaml",
+        ".github/workflows/*.yml",
+        ".github/workflows/*.yaml"
     ],
     "./src/schemas/job.schema.json": [
-      "src/templates/jobs/*.yml",
-      "src/templates/jobs/*.yaml"
+        "src/templates/jobs/*.yml",
+        "src/templates/jobs/*.yaml"
     ],
     "./src/schemas/step.schema.json": [
-      "src/templates/steps/*.yml",
-      "src/templates/steps/*.yaml"
+        "src/templates/steps/*.yml",
+        "src/templates/steps/*.yaml"
     ],
     "./src/schemas/inputs/workflow-inputs.schema.json": [
-      "src/templates/workflows/inputs/*.yml",
-      "src/templates/workflows/inputs/*.yaml"
+        "src/templates/workflows/inputs/*.yml",
+        "src/templates/workflows/inputs/*.yaml"
     ],
     "./src/schemas/outputs/job-outputs.schema.json": [
-      "src/templates/jobs/outputs/*.yml",
-      "src/templates/jobs/outputs/*.yaml"
-    ]
-  },
+        "src/templates/jobs/outputs/*.yml",
+        "src/templates/jobs/outputs/*.yaml"
+    ],
+    "file:///Volumes/coding/personal/gha/src/schemas/job.schema.json": "file:///Volumes/coding/personal/gha/src/templates/jobs/test-node.yml",
+    "https://json.schemastore.org/github-action.json": "file:///Volumes/coding/personal/gha/src/templates/actions/test-action.yml"
+},
   "yaml.customTags": [
     "!ref scalar",
     "!include scalar",
@@ -47,5 +49,13 @@
       "comments": false,
       "strings": true
     }
-  }
+},
+"cSpell.words": [
+    "catthehacker",
+    "choco",
+    "deepseek",
+    "elif",
+    "openrouter",
+    "Redirections"
+]
 }

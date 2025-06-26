@@ -296,7 +296,7 @@ jobs:
           exit 1
 
   publish_npm:
-    name: Publish to npm
+    name: npm
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.npm != '' )
     needs:
       - detect_platforms
@@ -350,7 +350,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
 
   publish_jsr:
-    name: Publish to jsr
+    name: jsr
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.jsr != '' )
     needs:
       - detect_platforms
@@ -439,7 +439,7 @@ jobs:
         run: npx jsr publish
 
   publish_github:
-    name: Publish to Github Packages
+    name: Github Packages
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.github_packages != '' )
     needs:
       - detect_platforms
@@ -493,7 +493,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
   publish_success:
-    name: "Publication Successful"
+    name: "Published"
     if: ( !failure() && contains(github.event.head_commit.message, 'release v') )
     needs:
       - publish_npm
@@ -517,7 +517,7 @@ jobs:
           echo "::notice :: ${{ github.actor }} published from ${{github.ref_type}} ${{ github.ref_name }} to ${{ env.PLATFORMS }} and updated the repo's changelog entry 🚀"
 
   publish_failure:
-    name: "Publication Failure"
+    name: "Failure"
     if: ( failure() && contains(github.event.head_commit.message, 'release v') )
     needs:
       - publish_npm
@@ -619,7 +619,7 @@ jobs:
             echo "Available tags:"
             git ls-remote --tags origin | head -5
           fi
-      - name: "Cancel Workflow"
+      - name: "Canceled"
         run: |
           echo "::notice::Tests passed but publication failed - cancelling workflow to indicate controlled failure"
           # Use the GitHub API to cancel the workflow

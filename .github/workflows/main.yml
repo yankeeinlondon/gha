@@ -4,17 +4,12 @@ on:
   push:
     branches:
       - main
-
 jobs:
   test:
     name: testing
     uses: yankeeinlondon/gha/.github/workflows/test.yml@main
-    secrets:
-      gh_token: ${{secrets.GH_TOKEN}}
 
   publish:
     name: publish
     needs: test  # This ensures tests pass before publishing
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
-    secrets:
-      gh_token: ${{secrets.GH_TOKEN}}

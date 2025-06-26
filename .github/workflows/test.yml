@@ -130,19 +130,21 @@ jobs:
                   covered_statements: ([.s | to_entries | .[] | select(.value > 0)] | length),
                   functions: (.fnMap | to_entries | length),
                   covered_functions: ([.f | to_entries | .[] | select(.value > 0)] | length),
-                  branches: (.branchMap | to_entries | length),
-                  covered_branches: ([.b | to_entries | .[] | .[] | select(. > 0)] | length)
+                  # For branches: each branch has an array of counters (usually 2 for if/else)
+                  # Count total possible branches and covered branches correctly
+                  branch_items: (.b | to_entries | map(.value | length) | add // 0),
+                  covered_branch_items: (.b | to_entries | map(.value | map(select(. > 0)) | length) | add // 0)
                 }
               ] |
               {
-                lines: (map(.lines) | add),
-                covered_lines: (map(.covered_lines) | add),
-                statements: (map(.statements) | add),
-                covered_statements: (map(.covered_statements) | add),
-                functions: (map(.functions) | add),
-                covered_functions: (map(.covered_functions) | add),
-                branches: (map(.branches) | add),
-                covered_branches: (map(.covered_branches) | add)
+                lines: (map(.lines) | add // 0),
+                covered_lines: (map(.covered_lines) | add // 0),
+                statements: (map(.statements) | add // 0),
+                covered_statements: (map(.covered_statements) | add // 0),
+                functions: (map(.functions) | add // 0),
+                covered_functions: (map(.covered_functions) | add // 0),
+                branches: (map(.branch_items) | add // 0),
+                covered_branches: (map(.covered_branch_items) | add // 0)
               } |
               {
                 lines_pct: (if .lines > 0 then (.covered_lines / .lines * 100) else 0 end),

@@ -60,7 +60,7 @@ on:
 
 jobs:
   detect_platforms:
-    name: publish
+    name: evaluate
     if: contains(github.event.head_commit.message, 'release v')
     runs-on: ubuntu-latest
     outputs:
@@ -258,7 +258,7 @@ jobs:
           echo "::notice::Ready to publish to the following registry platforms: ${{ steps.platform-detection.outputs.platforms }}"
 
   cancel_if_all_skipped:
-    name: Cancel if all platforms skipped
+    name: cancel
     if: needs.detect_platforms.outputs.all_skipped == 'true'
     needs:
       - detect_platforms

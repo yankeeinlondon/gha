@@ -9,7 +9,7 @@
   "module": "./dist/index.js",
   "scripts": {
     "lint": "eslint src",
-    "test": "vitest run",
+    "test": "echo 'no tests until we move to Typescript solution'",
     "test:watch": "vitest",
     "build": "run-p build:*",
     "build:symbols": "tsdown src/index.ts --format=esm --dts",

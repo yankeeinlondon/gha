@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { isError } from "@yankeeinlondon/kind-error";
 import { compile } from 'json-schema-to-typescript';
 import { getJsonSchemas } from "./utils/getJsonSchemas";
-import { cwd, exit } from "process";
+import {  exit } from "process";
 import { JSONSchema4 } from "json-schema";
 import { join } from "path";
 import { writeFileSync } from "fs";
@@ -25,7 +25,7 @@ const workflowDefinitions: Record<string, JSONSchema4> = {};
 const actionDefinitions: Record<string, JSONSchema4> = {};
 
 if (workflows.definitions) {
-    console.log(`- Processing sub-schema's for ${chalk.bold.italic.yellow("workflows")}`)
+    console.log(`- Processing sub-schema's for ${chalk.bold.italic.yellow("workflows")} [${chalk.dim(workflows.$schema)}]`)
     for (const [key, sub] of Object.entries(workflows.definitions)) {
         console.log(chalk.dim(`    - ${key}`));
         workflowDefinitions[key] = sub as JSONSchema4;
@@ -116,5 +116,5 @@ for (const key of keysOf(actionDefinitions)) {
         ts,
         'utf-8'
     );
-    console.log(`  - wrote ${chalk.dim(dir)}${file}`);
+    console.log(`  - wrote ${chalk.dim(dir)}${file} [ ${chalk.dim(schema.$schema)}, ${chalk.dim(schema.$ref)} ]`);
 }

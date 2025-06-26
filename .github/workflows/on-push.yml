@@ -1,20 +1,287 @@
-name: Continuous Integration
+name: test
 
 on:
-  push:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+        required: false
+      nodeVersions:
+        type: string
+        default: '["20.x", "22.x"]'
+        required: false
+      failFast:
+        type: boolean
+        default: false
+        required: false
+      metrics:
+        type: boolean
+        default: false
+        required: false
+      metricsCommand:
+        type: string
+        default: "pnpm test:metrics"
+        required: false
+      api_token:
+        type: string
+        description: "allows an API token to be passed to testing as API_TOKEN and VITE_API_TOKEN"
+        default: ""
+        required: false
+      gh_token:
+        description: "allows a Github personal access token to be passed to testing as GH_TOKEN and VITE_GH_TOKEN"
+        type: string
+        default: ""
+        required: false
+      bitbucket_token:
+        type: string
+        default: ""
+        required: false
+      gitlab_token:
+        type: string
+        default: ""
+        required: false
+      bun:
+        type: boolean
+        default: false
+        required: false
+
+    secrets:
+      gh_token:
+        required: false
+      bitbucket_token:
+        required: false
+      gitlab_token:
+        required: false
+      api_token:
+        required: false
 
 jobs:
-  testing:
-    name: testing
-    uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+
+          
+  metrics:
+    name: metrics
+    runs-on: ubuntu-latest
+    if: ${{ inputs.metrics }}
+    env:
+      VITE_GH_TOKEN: ${{ secrets.gh_token }}
+      GH_TOKEN: ${{ secrets.gh_token }}
+      VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      API_TOKEN: ${{ secrets.api_token }}
+      VITE_API_TOKEN: ${{ secrets.api_token }}
+
+    steps:
+      - name: Github Token
+        if: ${{ env.GH_TOKEN != '' }}
+        run: |
+          echo "::notice:: GH_TOKEN and VITE_GH_TOKEN env variables are available for testing."
+      - name: API Token
+        if: ${{ env.API_TOKEN != '' }}
+        run: |
+          echo "::notice:: API_TOKEN and VITE_API_TOKEN env variables are available for testing."
+      - name: Bitbucket Token
+        if: ${{ env.BITBUCKET_TOKEN != '' }}
+        run: |
+          echo "::notice:: BITBUCKET_TOKEN and VITE_BITBUCKET_TOKEN env variables are available for testing."
+      - name: Gitlab Token
+        if: ${{ env.GITLAB_TOKEN != '' }}
+        run: |
+          echo "::notice:: GITLAB_TOKENs and VITE_GITLAB_TOKENs env variables are available for testing."
+      - name: Bun
+        if: ${{ inputs.bun }}
+        uses: oven-sh/setup-bun@v2
+        
+      - name: ENV Flag for Windows
+        env: 
+          OS: ${{ github.env.RUNNER_OS }}
+        run: |
+          echo "OS=${RUNNER_OS}"
+
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+      - name: Setup
+        run: npm i -g pnpm @antfu/ni
+      - name: Install
+        run: pnpm install
+      - name: Build
+        run: nr build
+      - name: Test
+        id: test
+        run: |
+          echo "results=$(${{ inputs.metricsCommand }})" >> $GITHUB_OUTPUT
+      - name: Results
+        run: |
+          echo "Test results: ${{ steps.test.outputs.results }}"
+
+  unit:
+    name: unit tests
+    runs-on: ${{ matrix.os }}
+    env:
+      VITE_GH_TOKEN: ${{ secrets.gh_token }}
+      GH_TOKEN: ${{ secrets.gh_token }}
+      VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      API_TOKEN: ${{ secrets.api_token }}
+      VITE_API_TOKEN: ${{ secrets.api_token }}
+      OS: ${{ github.env.RUNNER_OS }}
+    strategy:
+      matrix:
+        node-version: ${{ fromJSON(inputs.nodeVersions) }}
+        os: ${{ fromJSON(inputs.os) }}
+      fail-fast: ${{ inputs.failFast }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        if: ${{ inputs.bun }}
+      - name: Bun Install
+        run: bun install
+        if: ${{ inputs.bun }}
+      - name: Bun Builder
+        run: bun run build
+        if: ${{ inputs.bun }}
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Setup
+        run: npm i -g pnpm @antfu/ni
+      - name: Install
+        run: pnpm install
+      - name: Build
+        run: nr build
+      - name: Test
+        run: pnpm test
+
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Info
+        run: |
+          echo "::group::Info"
+          echo "Commit Msg: '${{github.event.head_commit.message}}'"
+          echo "Actor: ${{github.actor}}"
+          echo "Event Name: ${{github.event_name}}"
+          echo "Event Path: ${{github.event_path}}"
+          echo "HEAD Ref: ${{github.head_ref}}"
+          echo "Ref Name: ${{github.ref_name}}"
+          echo "Ref Type: ${{github.ref_type}}"
+          echo "Workflow: ${{github.workflow}}"
+          echo "Workspace: ${{github.workspace}}"
+          echo "Action: ${{github.action}}"
+          echo "Action Path: ${{github.action_path}}"
+          echo "Action Ref: ${{github.action_ref}}"
+          echo "Action Status: ${{github.action_status}}"
+          echo "Repo: ${{github.action_repository}}"
+          echo "Base Ref: ${{github.base_ref}}"
+          echo "ENV: ${{ toJSON(env) }}"
+          echo "Job: ${{ toJSON(job) }}"
+          echo "Steps: ${{ toJSON(steps) }}"
+          echo "Runner: ${{ toJSON(runner) }}"
+          echo "OS: ${RUNNER_OS}"
+          echo "::endgroup::"
+          echo "::notice:: ${{github.actor}} has triggered CI"
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup
+        run: npm i -g pnpm @antfu/ni
+      - name: Clean Install
+        run: nci
+      - name: Lint
+        run: nr lint --if-present
+      - name: Cancel Workflow
+        if: failure()
+        uses: andymckay/cancel-action@0.4
+
+  success:
+    name: success
+    if: ( !failure() )
+    runs-on: ubuntu-latest
+    needs:
+      - unit
+      - metrics
+      - lint
+
+    steps:
+      - name: Success
+        run: |
+          echo ":rocket: tests run successfully"
+          echo "::notice status=success::Tests and Linting completed successfully. The changes in this commit versus last can be found at: ${{ github.event.compare }}"
+
+  failure:
+    name: failure
+    if: failure()
+    runs-on: ubuntu-latest
+    needs:
+        - unit
+        - metrics
+        - lint
+
+    steps:
+      - name: "Analyze Failure"
+        continue-on-error: true
+        run: |
+            echo "::error::Testing has failed"
+            
+            # Check individual job results
+            LINT_STATUS="${{ needs.lint.result }}"
+            METRICS_STATUS="${{ needs.metrics.result }}"
+            UNIT_STATUS="${{ needs.unit.result }}"
+            
+            FAILED_JOBS=()
+            CANCELLED_JOBS=()
+            WARN_JOBS=()
+
+            # Check each job status
+            if [ "$LINT_STATUS" == "failure" ]; then
+                FAILED_JOBS+=("lint testing")
+                echo "::error::Linter failed!"
+            fi
+            if [ "$LINT_STATUS" == "cancelled" ]; then
+                CANCELLED_JOBS+=("Linter")
+                echo "::warning::Linter failed so cancelling the other test tasks (so we can fail fast)"
+            fi
+
+            
+            if [ "$METRICS_STATUS" == "failure" ]; then
+                FAILED_JOBS+=("metrics")
+                echo "::error::metrics production failed"
+            fi
+            
+            if [ "$UNIT_STATUS" == "failure" ]; then
+                UNIT_STATUS+=("unit testing")
+                echo "::error::JSR Publishing job failed"
+            fi
+            
+          
+            # Create summary
+            if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
+                IFS=", "
+                FAILED_LIST="${FAILED_JOBS[*]}"
+                echo "::notice::Failed jobs: $FAILED_LIST"
+            elif [ ${#CANCELLED_JOBS[@]} -gt 0 ]; then
+                echo "::warning::Job has been cancelled"
+            else
+                echo "::info::No specific job failures detected, but workflow failed overall"
+            fi
 
   detect_platforms:
-    name: Detect Publishing Platforms
+    name: publish
     if: contains(github.event.head_commit.message, 'release v')
-    needs: 
-      - testing
+    needs:
+      - unit
+      - lint
+      - metrics
+      - success
     runs-on: ubuntu-latest
     outputs:
       npm: ${{ steps.platform-detection.outputs.npm }}
@@ -22,6 +289,7 @@ jobs:
       github_packages: ${{ steps.platform-detection.outputs.github_packages }}
       platforms: ${{ steps.platform-detection.outputs.platforms }}
       has_npm_token: ${{ steps.platform-detection.outputs.has_npm_token }}
+      all_skipped: ${{ steps.platform-detection.outputs.all_skipped }}
     steps:
       - name: Early Problem Detection - Check Workflow Permissions
         run: |
@@ -94,25 +362,55 @@ jobs:
       - name: Detect Publishing Platforms
         id: platform-detection
         run: |
-          # NPM Detection
+          echo "::group::Platform Detection"
+          
+          # Initialize variables
           NPM=""
-          if [ -f "package.json" ]; then
+          JSR=""
+          GITHUB_PACKAGES=""
+          SKIPPED_PLATFORMS=()
+          ENABLED_PLATFORMS=()
+          
+          # NPM Detection with skip file check
+          if [ -f ".skip-npm" ]; then
+            echo "::notice::NPM publishing skipped - .skip-npm file detected"
+            SKIPPED_PLATFORMS+=("NPM")
+          elif [ -f "package.json" ]; then
             PRIVATE=$(cat package.json | jq -r '.private // false')
             if [ "$PRIVATE" != "true" ]; then
               NPM="npm"
+              ENABLED_PLATFORMS+=("NPM")
+              echo "✅ NPM publishing enabled"
+            else
+              echo "ℹ️ NPM publishing disabled - package.json has private:true"
+              SKIPPED_PLATFORMS+=("NPM (private)")
             fi
+          else
+            echo "ℹ️ NPM publishing not applicable - no package.json found"
           fi
           
-          # JSR Detection
-          JSR=""
-          if [ -f "deno.json" ] || [ -f "deno.jsonc" ] || [ -f "jsr.json" ] || [ -f "jsr.jsonc" ]; then
+          # JSR Detection with skip file check
+          if [ -f ".skip-jsr" ]; then
+            echo "::notice::JSR publishing skipped - .skip-jsr file detected"
+            SKIPPED_PLATFORMS+=("JSR")
+          elif [ -f "deno.json" ] || [ -f "deno.jsonc" ] || [ -f "jsr.json" ] || [ -f "jsr.jsonc" ]; then
             JSR="jsr"
+            ENABLED_PLATFORMS+=("JSR")
+            echo "✅ JSR publishing enabled"
+          else
+            echo "ℹ️ JSR publishing not applicable - no jsr.json or deno.json found"
           fi
           
-          # GitHub Packages Detection
-          GITHUB_PACKAGES=""
-          if [ -f ".npmrc.github" ]; then
+          # GitHub Packages Detection with skip file check
+          if [ -f ".skip-github-packages" ]; then
+            echo "::notice::GitHub Packages publishing skipped - .skip-github-packages file detected"
+            SKIPPED_PLATFORMS+=("GitHub Packages")
+          elif [ -f ".npmrc.github" ]; then
             GITHUB_PACKAGES="Github packages"
+            ENABLED_PLATFORMS+=("GitHub Packages")
+            echo "✅ GitHub Packages publishing enabled"
+          else
+            echo "ℹ️ GitHub Packages publishing not applicable - no .npmrc.github found"
           fi
           
           # Generate platform list
@@ -126,6 +424,12 @@ jobs:
           IFS=", "
           PLATFORMS="${PLATFORM_ARRAY[*]}"
           
+          # Check if all platforms are skipped
+          ALL_SKIPPED="false"
+          if [ ${#PLATFORM_ARRAY[@]} -eq 0 ]; then
+            ALL_SKIPPED="true"
+          fi
+          
           # Check NPM token availability (temporarily disabled for testing)
           HAS_NPM_TOKEN="true"  # Set to true to bypass check during testing
           
@@ -135,11 +439,31 @@ jobs:
           echo "github_packages=$GITHUB_PACKAGES" >> $GITHUB_OUTPUT
           echo "platforms=$PLATFORMS" >> $GITHUB_OUTPUT
           echo "has_npm_token=$HAS_NPM_TOKEN" >> $GITHUB_OUTPUT
+          echo "all_skipped=$ALL_SKIPPED" >> $GITHUB_OUTPUT
           
-          # Debug output
-          echo "Detected registry platforms: $PLATFORMS"
-          echo "NPM: '$NPM', JSR: '$JSR', GitHub Packages: '$GITHUB_PACKAGES'"
-          echo "Has NPM Token: '$HAS_NPM_TOKEN' (bypassed for testing)"
+          # Generate comprehensive summary
+          echo ""
+          echo "📊 Publishing Summary:"
+          echo "===================="
+          
+          if [ ${#ENABLED_PLATFORMS[@]} -gt 0 ]; then
+            echo "✅ Enabled platforms: ${ENABLED_PLATFORMS[*]}"
+          fi
+          
+          if [ ${#SKIPPED_PLATFORMS[@]} -gt 0 ]; then
+            echo "⏭️  Skipped platforms: ${SKIPPED_PLATFORMS[*]}"
+          fi
+          
+          if [ "$ALL_SKIPPED" == "true" ]; then
+            echo ""
+            echo "::warning::All publishing platforms are skipped or not applicable!"
+            echo "::notice::To enable publishing, remove skip files (.skip-npm, .skip-jsr, .skip-github-packages) or ensure proper configuration files exist"
+          else
+            echo ""
+            echo "::notice::Will publish to: $PLATFORMS"
+          fi
+          
+          echo "::endgroup::"
 
       - name: "Early Problem Detection - NPM Token"
         if: steps.platform-detection.outputs.npm != '' && steps.platform-detection.outputs.has_npm_token == 'false'
@@ -153,6 +477,43 @@ jobs:
           echo "ready to publish"
           echo "::notice::Ready to publish to the following registry platforms: ${{ steps.platform-detection.outputs.platforms }}"
 
+  cancel_if_all_skipped:
+    name: Cancel if all platforms skipped
+    if: needs.detect_platforms.outputs.all_skipped == 'true'
+    needs:
+      - detect_platforms
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel workflow
+        run: |
+          echo "::warning::All publishing platforms are skipped - cancelling workflow"
+          echo ""
+          echo "📋 Publishing was skipped for all platforms due to skip files or configuration."
+          echo ""
+          echo "To enable publishing, you can:"
+          echo "  - Remove .skip-npm to enable NPM publishing"
+          echo "  - Remove .skip-jsr to enable JSR publishing"
+          echo "  - Remove .skip-github-packages to enable GitHub Packages publishing"
+          echo ""
+          echo "Or ensure the required configuration files exist:"
+          echo "  - package.json (with private: false) for NPM"
+          echo "  - jsr.json or deno.json for JSR"
+          echo "  - .npmrc.github for GitHub Packages"
+          echo ""
+          
+          # Cancel the workflow using GitHub API
+          echo "Cancelling workflow run #${{ github.run_id }}..."
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel"
+          
+          # Give the API call time to process
+          sleep 5
+          
+          # Exit with error to ensure the workflow is marked as failed
+          exit 1
 
   publish_npm:
     name: Publish to npm
@@ -176,10 +537,6 @@ jobs:
         run: pnpm install
       - name: Build
         run: nr build
-
-        env:
-          NPM_TOKEN_VALUE: ${{ secrets.NPM_TOKEN }}
-
       - name: Check Package Existence and Access Level
         id: npm-check
         run: |
@@ -230,7 +587,75 @@ jobs:
         with:
           version: latest
       - run: pnpm install --frozen-lockfile
+      
+      - name: Check JSR Package Existence
+        id: jsr-check
+        run: |
+          # Extract package name from jsr.json or deno.json
+          PACKAGE_NAME=""
+          
+          # Check jsr.json first
+          if [ -f "jsr.json" ] || [ -f "jsr.jsonc" ]; then
+            if [ -f "jsr.json" ]; then
+              PACKAGE_NAME=$(cat jsr.json | jq -r '.name // empty')
+            else
+              PACKAGE_NAME=$(cat jsr.jsonc | jq -r '.name // empty')
+            fi
+          fi
+          
+          # If not found, check deno.json
+          if [ -z "$PACKAGE_NAME" ]; then
+            if [ -f "deno.json" ] || [ -f "deno.jsonc" ]; then
+              if [ -f "deno.json" ]; then
+                PACKAGE_NAME=$(cat deno.json | jq -r '.name // empty')
+              else
+                PACKAGE_NAME=$(cat deno.jsonc | jq -r '.name // empty')
+              fi
+            fi
+          fi
+          
+          # Validate package name
+          if [ -z "$PACKAGE_NAME" ]; then
+            echo "::error::Could not extract package name from jsr.json or deno.json"
+            exit 1
+          fi
+          
+          echo "Checking if package '$PACKAGE_NAME' exists on JSR..."
+          
+          # Check if package exists on JSR
+          # JSR API endpoint format: https://api.jsr.io/packages/{scope}/{name}
+          # Extract scope and name from package name (format: @scope/name)
+          SCOPE=$(echo "$PACKAGE_NAME" | cut -d'/' -f1 | sed 's/@//')
+          NAME=$(echo "$PACKAGE_NAME" | cut -d'/' -f2)
+          
+          if [ -z "$SCOPE" ] || [ -z "$NAME" ]; then
+            echo "::error::Invalid package name format. Expected @scope/name, got: $PACKAGE_NAME"
+            exit 1
+          fi
+          
+          # Check if package exists
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://api.jsr.io/packages/$SCOPE/$NAME")
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Package $PACKAGE_NAME exists on JSR"
+            echo "package_exists=true" >> $GITHUB_OUTPUT
+          elif [ "$HTTP_STATUS" = "404" ]; then
+            echo "::warning::Package '$PACKAGE_NAME' does not exist on JSR registry"
+            echo "::warning::To register this package on JSR:"
+            echo "::warning::1. Visit https://jsr.io"
+            echo "::warning::2. Sign in with your GitHub account"
+            echo "::warning::3. Create a new package with the name: $PACKAGE_NAME"
+            echo "::warning::4. Follow the setup instructions provided by JSR"
+            echo "::warning::Skipping JSR publish step as package is not registered"
+            echo "package_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "::warning::Could not verify package existence on JSR (HTTP status: $HTTP_STATUS)"
+            echo "::warning::Proceeding with publish attempt anyway"
+            echo "package_exists=unknown" >> $GITHUB_OUTPUT
+          fi
+          
       - name: Publish to JSR
+        if: steps.jsr-check.outputs.package_exists != 'false'
         run: npx jsr publish
 
   publish_github:

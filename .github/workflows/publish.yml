@@ -68,7 +68,7 @@ jobs:
       jsr: ${{ steps.platform-detection.outputs.jsr }}
       github_packages: ${{ steps.platform-detection.outputs.github_packages }}
       platforms: ${{ steps.platform-detection.outputs.platforms }}
-      has_npm_token: ${{ steps.platform-detection.outputs.has_npm_token }}
+      has_npm_token: ${{ steps.check-npm-token.outputs.has_npm_token }}
       all_skipped: ${{ steps.platform-detection.outputs.all_skipped }}
     steps:
       - name: Checkout repo
@@ -146,13 +146,8 @@ jobs:
           fi
           
           # Check NPM token availability
-          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
-            HAS_NPM_TOKEN="true"
-            echo "::notice::NPM_TOKEN secret is available"
-          else
-            HAS_NPM_TOKEN="false"
-            echo "::warning::NPM_TOKEN secret is not available"
-          fi
+          # We'll check this in a separate step because secrets can't be checked directly in shell
+          HAS_NPM_TOKEN="pending"
           
           # Set outputs
           echo "npm=$NPM" >> $GITHUB_OUTPUT
@@ -186,13 +181,33 @@ jobs:
           
           echo "::endgroup::"
 
-      - name: "Early Problem Detection - NPM Token"
-        if: steps.platform-detection.outputs.npm != '' && steps.platform-detection.outputs.has_npm_token == 'false'
+      - name: Check NPM Token Availability
+        id: check-npm-token
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          echo "::warning::NPM is a target platform but NPM_TOKEN secret is missing or empty!"
-          echo "NPM detected: ${{ steps.platform-detection.outputs.npm }}"
-          echo "Has NPM Token: ${{ steps.platform-detection.outputs.has_npm_token }}"
-          exit 16
+          echo "::group::NPM Token Check Debug"
+          echo "Checking NPM_TOKEN availability..."
+          echo "Length of NPM_TOKEN: ${#NPM_TOKEN}"
+          
+          # GitHub masks secrets, so we can't see the actual value, but we can check if it exists
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN is empty or not set"
+            echo "has_npm_token=false" >> $GITHUB_OUTPUT
+            echo "::warning::NPM_TOKEN secret is not available or empty"
+            echo "::warning::NPM authentication requires NPM_TOKEN secret to be set"
+          elif [ "${NPM_TOKEN}" = "" ]; then
+            echo "NPM_TOKEN is an empty string"
+            echo "has_npm_token=false" >> $GITHUB_OUTPUT
+            echo "::warning::NPM_TOKEN secret is set but empty"
+          else
+            echo "NPM_TOKEN is available (length: ${#NPM_TOKEN})"
+            echo "has_npm_token=true" >> $GITHUB_OUTPUT
+            echo "::notice::NPM_TOKEN secret is available (will be used as NODE_AUTH_TOKEN for npm)"
+          fi
+          echo "::endgroup::"
+
+      # Remove the early NPM token check as secrets might not be available in this job
       - name: "Ready"
         run: |
           echo "ready to publish"
@@ -258,16 +273,24 @@ jobs:
         run: pnpm install
       - name: Build
         run: nr build
-      - name: Debug NPM Configuration
-        run: |
-          echo "::group::NPM Configuration Debug"
-          echo "Registry URL from setup-node: https://registry.npmjs.org/"
-          echo "NODE_AUTH_TOKEN is set: ${{ secrets.NPM_TOKEN != '' }}"
-          echo "NPM config list:"
-          npm config list
-          echo "::endgroup::"
+      - name: Check NPM Token in Publish Job
+        id: npm-token-check
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "::group::NPM Token Check"
+          echo "Checking if NPM_TOKEN was passed to this job..."
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN secret is not available in the publish job!"
+            echo "::error::Please ensure NPM_TOKEN is set in your repository secrets"
+            echo "::error::and passed correctly in the workflow call"
+            exit 1
+          else
+            echo "✅ NPM_TOKEN is available (length: ${#NODE_AUTH_TOKEN})"
+            echo "NPM config list:"
+            npm config list
+          fi
+          echo "::endgroup::"
       - name: Check Package Existence and Access Level
         id: npm-check
         run: |

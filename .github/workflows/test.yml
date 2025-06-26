@@ -51,7 +51,7 @@ on:
 jobs:
 
   check-coverage:
-    name: eval
+    name: .
     runs-on: ubuntu-latest
     outputs:
       has_coverage: ${{ steps.check.outputs.has_coverage }}

@@ -71,7 +71,7 @@ jobs:
       has_npm_token: ${{ steps.check-npm-token.outputs.has_npm_token }}
       all_skipped: ${{ steps.platform-detection.outputs.all_skipped }}
     steps:
-      - name: Checkout repo
+      - name: Checkout Repo
         uses: actions/checkout@v4
       
       - name: Detect Publishing Platforms
@@ -397,20 +397,38 @@ jobs:
           echo "Parsed scope: $SCOPE"
           echo "Parsed name: $NAME"
           
-          # Check the web URL since that's confirmed to work
+          # Check using JSR API endpoint
+          API_URL="https://api.jsr.io/scopes/$SCOPE/packages/$NAME"
           WEB_URL="https://jsr.io/@$SCOPE/$NAME"
-          echo "Checking JSR web URL: $WEB_URL"
+          echo "Checking JSR API: $API_URL"
+          echo "Web URL: $WEB_URL"
           
-          # Use curl with -L to follow redirects
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "$WEB_URL")
-          echo "HTTP Status: $HTTP_STATUS"
+          # First try the API endpoint
+          API_RESPONSE=$(curl -s -w "\n%{http_code}" "$API_URL")
+          API_STATUS=$(echo "$API_RESPONSE" | tail -n1)
+          API_BODY=$(echo "$API_RESPONSE" | head -n-1)
+          
+          echo "API Status: $API_STATUS"
+          
+          # If API doesn't work, try web URL with browser headers
+          if [ "$API_STATUS" != "200" ] && [ "$API_STATUS" != "404" ]; then
+            echo "API check inconclusive, trying web URL with browser headers..."
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L \
+              -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+              -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
+              "$WEB_URL")
+            echo "Web Status with browser headers: $HTTP_STATUS"
+          else
+            HTTP_STATUS="$API_STATUS"
+          fi
+          
           echo "::endgroup::"
           
-          # Check if package exists based on web URL status
-          if [ "$HTTP_STATUS" = "200" ]; then
+          # Check if package exists based on status
+          if [ "$API_STATUS" = "200" ] || [ "$HTTP_STATUS" = "200" ]; then
             echo "✅ Package $PACKAGE_NAME exists on JSR"
             echo "package_exists=true" >> $GITHUB_OUTPUT
-          elif [ "$HTTP_STATUS" = "404" ]; then
+          elif [ "$API_STATUS" = "404" ] || [ "$HTTP_STATUS" = "404" ]; then
             echo "::warning::Package '$PACKAGE_NAME' not found on JSR (404)"
             echo "::warning::To register this package on JSR:"
             echo "::warning::1. Visit https://jsr.io"
@@ -419,7 +437,7 @@ jobs:
             echo "::warning::Will attempt to publish anyway - it might be a new package"
             echo "package_exists=false" >> $GITHUB_OUTPUT
           else
-            echo "::notice::JSR returned status $HTTP_STATUS - proceeding with publish"
+            echo "::notice::Could not determine package existence (API: $API_STATUS, Web: $HTTP_STATUS) - proceeding with publish"
             echo "package_exists=unknown" >> $GITHUB_OUTPUT
           fi
           

@@ -94,7 +94,12 @@ jobs:
             !coverage/tmp/
       - name: Coverage summary
         run: |
+          # Try to find coverage data from various sources
+          COVERAGE_FOUND=false
+          
+          # Check for coverage-summary.json (Jest, NYC)
           if [ -f "coverage/coverage-summary.json" ]; then
+            echo "Found coverage-summary.json"
             COVERAGE=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
             echo "## Test Coverage Report 📊" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -108,8 +113,76 @@ jobs:
             echo "| Branches | $(jq -r '.total.branches.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
             
             echo "::notice::Test coverage: ${COVERAGE}%"
-          else
-            echo "::warning::Coverage summary not found at coverage/coverage-summary.json"
+            COVERAGE_FOUND=true
+            
+          # Check for coverage-final.json (Vitest, c8)
+          elif [ -f "coverage/coverage-final.json" ]; then
+            echo "Found coverage-final.json (Vitest format)"
+            
+            # For Vitest, we need to calculate totals from coverage-final.json
+            # This file contains per-file coverage data, so we'll aggregate it
+            TOTALS=$(jq -r '
+              [.[] |
+                {
+                  lines: (.s | to_entries | length),
+                  covered_lines: (.s | to_entries | map(select(.value > 0)) | length),
+                  statements: (.statementMap | to_entries | length),
+                  covered_statements: ([.s | to_entries | .[] | select(.value > 0)] | length),
+                  functions: (.fnMap | to_entries | length),
+                  covered_functions: ([.f | to_entries | .[] | select(.value > 0)] | length),
+                  branches: (.branchMap | to_entries | length),
+                  covered_branches: ([.b | to_entries | .[] | .[] | select(. > 0)] | length)
+                }
+              ] |
+              {
+                lines: (map(.lines) | add),
+                covered_lines: (map(.covered_lines) | add),
+                statements: (map(.statements) | add),
+                covered_statements: (map(.covered_statements) | add),
+                functions: (map(.functions) | add),
+                covered_functions: (map(.covered_functions) | add),
+                branches: (map(.branches) | add),
+                covered_branches: (map(.covered_branches) | add)
+              } |
+              {
+                lines_pct: (if .lines > 0 then (.covered_lines / .lines * 100) else 0 end),
+                statements_pct: (if .statements > 0 then (.covered_statements / .statements * 100) else 0 end),
+                functions_pct: (if .functions > 0 then (.covered_functions / .functions * 100) else 0 end),
+                branches_pct: (if .branches > 0 then (.covered_branches / .branches * 100) else 0 end)
+              }
+            ' coverage/coverage-final.json 2>/dev/null || echo '{}')
+            
+            if [ "$TOTALS" != "{}" ] && [ "$TOTALS" != "null" ]; then
+              COVERAGE=$(echo "$TOTALS" | jq -r '.lines_pct // 0' | xargs printf "%.2f")
+              STMT_COV=$(echo "$TOTALS" | jq -r '.statements_pct // 0' | xargs printf "%.2f")
+              FUNC_COV=$(echo "$TOTALS" | jq -r '.functions_pct // 0' | xargs printf "%.2f")
+              BRANCH_COV=$(echo "$TOTALS" | jq -r '.branches_pct // 0' | xargs printf "%.2f")
+              
+              echo "## Test Coverage Report 📊" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Overall Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "| Type | Coverage |" >> $GITHUB_STEP_SUMMARY
+              echo "|------|----------|" >> $GITHUB_STEP_SUMMARY
+              echo "| Lines | ${COVERAGE}% |" >> $GITHUB_STEP_SUMMARY
+              echo "| Statements | ${STMT_COV}% |" >> $GITHUB_STEP_SUMMARY
+              echo "| Functions | ${FUNC_COV}% |" >> $GITHUB_STEP_SUMMARY
+              echo "| Branches | ${BRANCH_COV}% |" >> $GITHUB_STEP_SUMMARY
+              
+              echo "::notice::Test coverage: ${COVERAGE}%"
+              COVERAGE_FOUND=true
+            fi
+          fi
+          
+          # Also check for text-based coverage report
+          if [ -f "coverage/lcov-report/index.html" ] || [ -f "coverage/index.html" ]; then
+            echo "::notice::HTML coverage report available in artifacts"
+          fi
+          
+          if [ "$COVERAGE_FOUND" = "false" ]; then
+            echo "::warning::Coverage data not found in expected formats (coverage-summary.json or coverage-final.json)"
+            echo "::notice::Available files in coverage directory:"
+            ls -la coverage/ 2>/dev/null || echo "Coverage directory not found"
           fi
 
   unit:

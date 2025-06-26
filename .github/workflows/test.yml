@@ -50,9 +50,28 @@ on:
 
 jobs:
 
+  check-coverage:
+    name: check coverage availability
+    runs-on: ubuntu-latest
+    outputs:
+      has_coverage: ${{ steps.check.outputs.has_coverage }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for coverage script
+        id: check
+        run: |
+          if jq -e '.scripts.coverage' package.json > /dev/null 2>&1; then
+            echo "has_coverage=true" >> $GITHUB_OUTPUT
+            echo "::notice::Coverage script found in package.json"
+          else
+            echo "has_coverage=false" >> $GITHUB_OUTPUT
+            echo "::notice::No coverage script found in package.json, coverage job will be skipped"
+          fi
           
   coverage:
     name: coverage
+    needs: check-coverage
+    if: needs.check-coverage.outputs.has_coverage == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,21 +83,9 @@ jobs:
         run: pnpm install
       - name: Build
         run: nr build
-      - name: Check for coverage script
-        id: has_coverage
-        run: |
-          if jq -e '.scripts.coverage' package.json > /dev/null 2>&1; then
-            echo "has_coverage=true" >> $GITHUB_OUTPUT
-            echo "::notice::Coverage script found in package.json"
-          else
-            echo "has_coverage=false" >> $GITHUB_OUTPUT
-            echo "::notice::No coverage script found in package.json, skipping coverage"
-          fi
       - name: Run coverage
-        if: steps.has_coverage.outputs.has_coverage == 'true'
         run: pnpm coverage
       - name: Upload coverage reports
-        if: steps.has_coverage.outputs.has_coverage == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -86,7 +93,6 @@ jobs:
             coverage/
             !coverage/tmp/
       - name: Coverage summary
-        if: steps.has_coverage.outputs.has_coverage == 'true'
         run: |
           if [ -f "coverage/coverage-summary.json" ]; then
             COVERAGE=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
@@ -193,12 +199,13 @@ jobs:
 
   success:
     name: success
-    if: ( !failure() )
+    if: ( !failure() && !cancelled() )
     runs-on: ubuntu-latest
     needs:
         - unit
         - coverage
         - lint
+        - check-coverage
 
     steps:
       - name: Success
@@ -214,6 +221,7 @@ jobs:
       - unit
       - coverage
       - lint
+      - check-coverage
 
     steps:
       - name: "Analyze Failure"
@@ -244,6 +252,9 @@ jobs:
             if [ "$COVERAGE_STATUS" == "failure" ]; then
                 FAILED_JOBS+=("coverage")
                 echo "::error::coverage tests failed"
+            fi
+            if [ "$COVERAGE_STATUS" == "skipped" ]; then
+                echo "::notice::Coverage was skipped (no coverage script in package.json)"
             fi
             
             if [ "$UNIT_STATUS" == "failure" ]; then

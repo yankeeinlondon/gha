@@ -15,14 +15,6 @@ on:
         type: boolean
         default: false
         required: false
-      metrics:
-        type: boolean
-        default: false
-        required: false
-      metricsCommand:
-        type: string
-        default: "pnpm test:metrics"
-        required: false
       api_token:
         type: string
         description: "allows an API token to be passed to testing as API_TOKEN and VITE_API_TOKEN"
@@ -59,47 +51,10 @@ on:
 jobs:
 
           
-  metrics:
-    name: metrics
+  coverage:
+    name: coverage
     runs-on: ubuntu-latest
-    if: ${{ inputs.metrics }}
-    env:
-      VITE_GH_TOKEN: ${{ secrets.gh_token }}
-      GH_TOKEN: ${{ secrets.gh_token }}
-      VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
-      BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
-      VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
-      GITLAB_TOKEN: ${{ secrets.gitlab_token }}
-      API_TOKEN: ${{ secrets.api_token }}
-      VITE_API_TOKEN: ${{ secrets.api_token }}
-
     steps:
-      - name: Github Token
-        if: ${{ env.GH_TOKEN != '' }}
-        run: |
-          echo "::notice:: GH_TOKEN and VITE_GH_TOKEN env variables are available for testing."
-      - name: API Token
-        if: ${{ env.API_TOKEN != '' }}
-        run: |
-          echo "::notice:: API_TOKEN and VITE_API_TOKEN env variables are available for testing."
-      - name: Bitbucket Token
-        if: ${{ env.BITBUCKET_TOKEN != '' }}
-        run: |
-          echo "::notice:: BITBUCKET_TOKEN and VITE_BITBUCKET_TOKEN env variables are available for testing."
-      - name: Gitlab Token
-        if: ${{ env.GITLAB_TOKEN != '' }}
-        run: |
-          echo "::notice:: GITLAB_TOKENs and VITE_GITLAB_TOKENs env variables are available for testing."
-      - name: Bun
-        if: ${{ inputs.bun }}
-        uses: oven-sh/setup-bun@v2
-        
-      - name: ENV Flag for Windows
-        env: 
-          OS: ${{ github.env.RUNNER_OS }}
-        run: |
-          echo "OS=${RUNNER_OS}"
-
       - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -109,13 +64,47 @@ jobs:
         run: pnpm install
       - name: Build
         run: nr build
-      - name: Test
-        id: test
+      - name: Check for coverage script
+        id: has_coverage
         run: |
-          echo "results=$(${{ inputs.metricsCommand }})" >> $GITHUB_OUTPUT
-      - name: Results
+          if jq -e '.scripts.coverage' package.json > /dev/null 2>&1; then
+            echo "has_coverage=true" >> $GITHUB_OUTPUT
+            echo "::notice::Coverage script found in package.json"
+          else
+            echo "has_coverage=false" >> $GITHUB_OUTPUT
+            echo "::notice::No coverage script found in package.json, skipping coverage"
+          fi
+      - name: Run coverage
+        if: steps.has_coverage.outputs.has_coverage == 'true'
+        run: pnpm coverage
+      - name: Upload coverage reports
+        if: steps.has_coverage.outputs.has_coverage == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage/
+            !coverage/tmp/
+      - name: Coverage summary
+        if: steps.has_coverage.outputs.has_coverage == 'true'
         run: |
-          echo "Test results: ${{ steps.test.outputs.results }}"
+          if [ -f "coverage/coverage-summary.json" ]; then
+            COVERAGE=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
+            echo "## Test Coverage Report 📊" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Overall Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Type | Coverage |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|----------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | $(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | $(jq -r '.total.statements.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | $(jq -r '.total.functions.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | $(jq -r '.total.branches.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+            
+            echo "::notice::Test coverage: ${COVERAGE}%"
+          else
+            echo "::warning::Coverage summary not found at coverage/coverage-summary.json"
+          fi
 
   unit:
     name: unit tests
@@ -207,9 +196,9 @@ jobs:
     if: ( !failure() )
     runs-on: ubuntu-latest
     needs:
-      - unit
-      - metrics
-      - lint
+        - unit
+        - coverage
+        - lint
 
     steps:
       - name: Success
@@ -222,9 +211,9 @@ jobs:
     if: failure()
     runs-on: ubuntu-latest
     needs:
-        - unit
-        - metrics
-        - lint
+      - unit
+      - coverage
+      - lint
 
     steps:
       - name: "Analyze Failure"
@@ -234,7 +223,7 @@ jobs:
             
             # Check individual job results
             LINT_STATUS="${{ needs.lint.result }}"
-            METRICS_STATUS="${{ needs.metrics.result }}"
+            COVERAGE_STATUS="${{ needs.coverage.result }}"
             UNIT_STATUS="${{ needs.unit.result }}"
             
             FAILED_JOBS=()
@@ -252,9 +241,9 @@ jobs:
             fi
 
             
-            if [ "$METRICS_STATUS" == "failure" ]; then
-                FAILED_JOBS+=("metrics")
-                echo "::error::metrics production failed"
+            if [ "$COVERAGE_STATUS" == "failure" ]; then
+                FAILED_JOBS+=("coverage")
+                echo "::error::coverage tests failed"
             fi
             
             if [ "$UNIT_STATUS" == "failure" ]; then

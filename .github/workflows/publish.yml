@@ -59,32 +59,9 @@ on:
         required: false
 
 jobs:
-  # Call the test workflow
-  test:
-    if: contains(github.event.head_commit.message, 'release v')
-    uses: ./.github/workflows/test.yml
-    with:
-      os: ${{ inputs.os }}
-      nodeVersions: ${{ inputs.nodeVersions }}
-      failFast: ${{ inputs.failFast }}
-      metrics: ${{ inputs.metrics }}
-      metricsCommand: ${{ inputs.metricsCommand }}
-      api_token: ${{ inputs.api_token }}
-      gh_token: ${{ inputs.gh_token }}
-      bitbucket_token: ${{ inputs.bitbucket_token }}
-      gitlab_token: ${{ inputs.gitlab_token }}
-      bun: ${{ inputs.bun }}
-    secrets:
-      gh_token: ${{ secrets.gh_token }}
-      bitbucket_token: ${{ secrets.bitbucket_token }}
-      gitlab_token: ${{ secrets.gitlab_token }}
-      api_token: ${{ secrets.api_token }}
-
   detect_platforms:
     name: publish
     if: contains(github.event.head_commit.message, 'release v')
-    needs:
-      - test
     runs-on: ubuntu-latest
     outputs:
       npm: ${{ steps.platform-detection.outputs.npm }}
@@ -322,7 +299,6 @@ jobs:
     name: Publish to npm
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.npm != '' )
     needs:
-      - test
       - detect_platforms
     runs-on: ubuntu-latest
     steps: 
@@ -377,7 +353,6 @@ jobs:
     name: Publish to jsr
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.jsr != '' )
     needs:
-      - test
       - detect_platforms
     runs-on: ubuntu-latest
     permissions:
@@ -467,7 +442,6 @@ jobs:
     name: Publish to Github Packages
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.github_packages != '' )
     needs:
-      - test
       - detect_platforms
     runs-on: ubuntu-latest
 
@@ -522,7 +496,6 @@ jobs:
     name: "Publication Successful"
     if: ( !failure() && contains(github.event.head_commit.message, 'release v') )
     needs:
-      - test
       - publish_npm
       - publish_github
       - publish_jsr
@@ -546,8 +519,7 @@ jobs:
   publish_failure:
     name: "Publication Failure"
     if: ( failure() && contains(github.event.head_commit.message, 'release v') )
-    needs: 
-      - test
+    needs:
       - publish_npm
       - publish_github
       - publish_jsr

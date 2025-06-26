@@ -1,6 +1,6 @@
 {
   "name": "@yankeeinlondon/gha",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
   "type": "module",
   "bin": {

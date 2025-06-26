@@ -9,7 +9,7 @@ on:
 jobs:
   on_push:
     name: on_push
-    uses: yankeeinlondon/gha/.github/workflows/on_push.yml@main
+    uses: yankeeinlondon/gha/.github/workflows/on-push.yml@main
     secrets:
       api_token: ${{secrets.API_TOKEN}}
       gh_token: ${{secrets.GH_TOKEN}}

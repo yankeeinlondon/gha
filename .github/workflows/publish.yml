@@ -71,71 +71,6 @@ jobs:
       has_npm_token: ${{ steps.platform-detection.outputs.has_npm_token }}
       all_skipped: ${{ steps.platform-detection.outputs.all_skipped }}
     steps:
-      - name: Early Problem Detection - Check Workflow Permissions
-        run: |
-          echo "Checking workflow permissions..."
-          
-          # Try the repository actions permissions endpoint
-          echo "Attempting to check repository actions permissions..."
-          REPO_ACTIONS=$(curl -s -w "HTTP_STATUS:%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/permissions")
-          
-          HTTP_STATUS=$(echo "$REPO_ACTIONS" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
-          RESPONSE_BODY=$(echo "$REPO_ACTIONS" | sed 's/HTTP_STATUS:[0-9]*$//')
-          
-          echo "HTTP Status: $HTTP_STATUS"
-          echo "Response:"
-          echo "$RESPONSE_BODY" | jq '.' 2>/dev/null || echo "$RESPONSE_BODY"
-          
-          if [ "$HTTP_STATUS" = "200" ]; then
-            # Check if we can see enabled/allowed_actions
-            ENABLED=$(echo "$RESPONSE_BODY" | jq -r '.enabled // "unknown"')
-            ALLOWED_ACTIONS=$(echo "$RESPONSE_BODY" | jq -r '.allowed_actions // "unknown"')
-            
-            echo "Actions enabled: $ENABLED"
-            echo "Allowed actions: $ALLOWED_ACTIONS"
-            
-            # Now try the workflow permissions endpoint
-            echo ""
-            echo "Checking default workflow permissions..."
-            WORKFLOW_PERMS=$(curl -s -w "HTTP_STATUS:%{http_code}" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/permissions/workflow")
-            
-            WF_HTTP_STATUS=$(echo "$WORKFLOW_PERMS" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
-            WF_RESPONSE_BODY=$(echo "$WORKFLOW_PERMS" | sed 's/HTTP_STATUS:[0-9]*$//')
-            
-            echo "Workflow permissions HTTP Status: $WF_HTTP_STATUS"
-            echo "Workflow permissions response:"
-            echo "$WF_RESPONSE_BODY" | jq '.' 2>/dev/null || echo "$WF_RESPONSE_BODY"
-            
-            if [ "$WF_HTTP_STATUS" = "200" ]; then
-              DEFAULT_PERMS=$(echo "$WF_RESPONSE_BODY" | jq -r '.default_workflow_permissions // "unknown"')
-              echo "Default workflow permissions: $DEFAULT_PERMS"
-              
-              if [ "$DEFAULT_PERMS" = "write" ]; then
-                echo "✅ Workflow permissions are correctly set to 'write'"
-              elif [ "$DEFAULT_PERMS" = "read" ]; then
-                echo "::error::Workflow permissions are set to 'read' - changelogithub will fail!"
-                echo "::error::Go to Settings > Actions > General > Workflow permissions"
-                echo "::error::Change to 'Read and write permissions'"
-                exit 1
-              else
-                echo "::warning::Unknown permissions setting: $DEFAULT_PERMS"
-              fi
-            else
-              echo "::warning::Cannot check workflow permissions (HTTP $WF_HTTP_STATUS)"
-            fi
-          else
-            echo "::warning::Cannot check repository actions permissions (HTTP $HTTP_STATUS)"
-            echo "::warning::If changelogithub fails, check Settings > Actions > General > Workflow permissions"
-          fi
-
       - name: Checkout repo
         uses: actions/checkout@v4
       
@@ -502,6 +437,10 @@ jobs:
       - detect_platforms
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Create Changelog Entry
         run: npx changelogithub
         env:

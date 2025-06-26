@@ -145,8 +145,14 @@ jobs:
             ALL_SKIPPED="true"
           fi
           
-          # Check NPM token availability (temporarily disabled for testing)
-          HAS_NPM_TOKEN="true"  # Set to true to bypass check during testing
+          # Check NPM token availability
+          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
+            HAS_NPM_TOKEN="true"
+            echo "::notice::NPM_TOKEN secret is available"
+          else
+            HAS_NPM_TOKEN="false"
+            echo "::warning::NPM_TOKEN secret is not available"
+          fi
           
           # Set outputs
           echo "npm=$NPM" >> $GITHUB_OUTPUT
@@ -252,12 +258,23 @@ jobs:
         run: pnpm install
       - name: Build
         run: nr build
+      - name: Debug NPM Configuration
+        run: |
+          echo "::group::NPM Configuration Debug"
+          echo "Registry URL from setup-node: https://registry.npmjs.org/"
+          echo "NODE_AUTH_TOKEN is set: ${{ secrets.NPM_TOKEN != '' }}"
+          echo "NPM config list:"
+          npm config list
+          echo "::endgroup::"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Check Package Existence and Access Level
         id: npm-check
         run: |
           PACKAGE_NAME=$(cat package.json | jq -r '.name')
           echo "Checking if package '$PACKAGE_NAME' exists on NPM..."
           
+          # First test without auth (public package check)
           if npm view "$PACKAGE_NAME" --json 2>/dev/null; then
             echo "✅ Package exists on NPM"
             # Get current access level
@@ -266,13 +283,17 @@ jobs:
             echo "access_level=$ACCESS_LEVEL" >> $GITHUB_OUTPUT
             echo "package_exists=true" >> $GITHUB_OUTPUT
           else
-            echo "::error::Package '$PACKAGE_NAME' does not exist on NPM registry"
-            echo "::error::Please create the package first by running 'npm publish --access public' or 'npm publish --access restricted' locally"
-            echo "::error::This workflow only publishes updates to existing packages to preserve access settings"
-            exit 199
+            echo "::warning::Package '$PACKAGE_NAME' not found or is private"
+            echo "::notice::Will attempt to create new package on NPM"
+            echo "access_level=public" >> $GITHUB_OUTPUT
+            echo "package_exists=false" >> $GITHUB_OUTPUT
           fi
+      - name: Verify NPM Authentication
+        run: |
+          echo "Testing NPM authentication..."
+          npm whoami 2>/dev/null && echo "✅ NPM authentication successful" || echo "::warning::NPM whoami failed (may be normal for automation tokens)"
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish to NPM
         run: |
           ACCESS_FLAG=""
@@ -282,7 +303,7 @@ jobs:
           echo "Publishing with access level: ${{ steps.npm-check.outputs.access_level }}"
           npm publish $ACCESS_FLAG
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish_jsr:
     name: jsr
@@ -348,29 +369,38 @@ jobs:
             exit 1
           fi
           
-          # Check if package exists
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://api.jsr.io/packages/$SCOPE/$NAME")
+          echo "::group::JSR Package Check"
+          echo "Package name: $PACKAGE_NAME"
+          echo "Parsed scope: $SCOPE"
+          echo "Parsed name: $NAME"
           
+          # Check the web URL since that's confirmed to work
+          WEB_URL="https://jsr.io/@$SCOPE/$NAME"
+          echo "Checking JSR web URL: $WEB_URL"
+          
+          # Use curl with -L to follow redirects
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "$WEB_URL")
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "::endgroup::"
+          
+          # Check if package exists based on web URL status
           if [ "$HTTP_STATUS" = "200" ]; then
             echo "✅ Package $PACKAGE_NAME exists on JSR"
             echo "package_exists=true" >> $GITHUB_OUTPUT
           elif [ "$HTTP_STATUS" = "404" ]; then
-            echo "::warning::Package '$PACKAGE_NAME' does not exist on JSR registry"
+            echo "::warning::Package '$PACKAGE_NAME' not found on JSR (404)"
             echo "::warning::To register this package on JSR:"
             echo "::warning::1. Visit https://jsr.io"
             echo "::warning::2. Sign in with your GitHub account"
             echo "::warning::3. Create a new package with the name: $PACKAGE_NAME"
-            echo "::warning::4. Follow the setup instructions provided by JSR"
-            echo "::warning::Skipping JSR publish step as package is not registered"
+            echo "::warning::Will attempt to publish anyway - it might be a new package"
             echo "package_exists=false" >> $GITHUB_OUTPUT
           else
-            echo "::warning::Could not verify package existence on JSR (HTTP status: $HTTP_STATUS)"
-            echo "::warning::Proceeding with publish attempt anyway"
+            echo "::notice::JSR returned status $HTTP_STATUS - proceeding with publish"
             echo "package_exists=unknown" >> $GITHUB_OUTPUT
           fi
           
       - name: Publish to JSR
-        if: steps.jsr-check.outputs.package_exists != 'false'
         run: npx jsr publish
 
   publish_github:

@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: On Push
 
 on:
   push:
@@ -9,8 +9,11 @@ jobs:
     name: testing
     uses: yankeeinlondon/gha/.github/workflows/test.yml@main
 
-  publish:
+  publish:    
     name: publish
     if: contains(github.event.head_commit.message, 'release v')
     needs: test  # This ensures tests pass before publishing
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+

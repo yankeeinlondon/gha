@@ -1,4 +1,4 @@
-name: Test
+name: test
 
 on:
   workflow_call:
@@ -57,10 +57,21 @@ on:
         required: false
 
 jobs:
+
+          
   metrics:
     name: metrics
     runs-on: ubuntu-latest
     if: ${{ inputs.metrics }}
+    env:
+      VITE_GH_TOKEN: ${{ secrets.gh_token }}
+      GH_TOKEN: ${{ secrets.gh_token }}
+      VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+      VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+      API_TOKEN: ${{ secrets.api_token }}
+      VITE_API_TOKEN: ${{ secrets.api_token }}
 
     steps:
       - name: Github Token
@@ -80,12 +91,12 @@ jobs:
         run: |
           echo "::notice:: GITLAB_TOKENs and VITE_GITLAB_TOKENs env variables are available for testing."
       - name: Bun
-        if: inputs.bun
+        if: ${{ inputs.bun }}
         uses: oven-sh/setup-bun@v2
         
       - name: ENV Flag for Windows
         env: 
-          OS: $RUNNER_OS
+          OS: ${{ github.env.RUNNER_OS }}
         run: |
           echo "OS=${RUNNER_OS}"
 
@@ -101,15 +112,13 @@ jobs:
       - name: Test
         id: test
         run: |
-          ::set-output name=results::`${{ inputs.metricsCommand }}`
+          echo "results=$(${{ inputs.metricsCommand }})" >> $GITHUB_OUTPUT
       - name: Results
-        env:
-          TST: fromJSON(steps.test.results)
         run: |
-          echo "::notice :: $TST.numTotalTests tests, $TST.numPassedTests passed, $TST.numFailedTests [ $TST.numTodoTests todos, $TST.numPendingTests  pending ]"
+          echo "Test results: ${{ steps.test.outputs.results }}"
 
-  test:
-    name: test
+  unit:
+    name: unit tests
     runs-on: ${{ matrix.os }}
     env:
       VITE_GH_TOKEN: ${{ secrets.gh_token }}
@@ -120,24 +129,23 @@ jobs:
       GITLAB_TOKEN: ${{ secrets.gitlab_token }}
       API_TOKEN: ${{ secrets.api_token }}
       VITE_API_TOKEN: ${{ secrets.api_token }}
-      OS: $RUNNER_OS
+      OS: ${{ github.env.RUNNER_OS }}
     strategy:
       matrix:
         node-version: ${{ fromJSON(inputs.nodeVersions) }}
         os: ${{ fromJSON(inputs.os) }}
-      # fail-fast: ${{ inputs.failFast }}
-      fail-fast: false
+      fail-fast: ${{ inputs.failFast }}
 
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        if: inputs.bun
+        if: ${{ inputs.bun }}
       - name: Bun Install
         run: bun install
-        if: inputs.bun
+        if: ${{ inputs.bun }}
       - name: Bun Builder
         run: bun run build
-        if: inputs.bun
+        if: ${{ inputs.bun }}
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -151,14 +159,117 @@ jobs:
       - name: Test
         run: pnpm test
 
-  complete:
-    name: complete
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Info
+        run: |
+          echo "::group::Info"
+          echo "Commit Msg: '${{github.event.head_commit.message}}'"
+          echo "Actor: ${{github.actor}}"
+          echo "Event Name: ${{github.event_name}}"
+          echo "Event Path: ${{github.event_path}}"
+          echo "HEAD Ref: ${{github.head_ref}}"
+          echo "Ref Name: ${{github.ref_name}}"
+          echo "Ref Type: ${{github.ref_type}}"
+          echo "Workflow: ${{github.workflow}}"
+          echo "Workspace: ${{github.workspace}}"
+          echo "Action: ${{github.action}}"
+          echo "Action Path: ${{github.action_path}}"
+          echo "Action Ref: ${{github.action_ref}}"
+          echo "Action Status: ${{github.action_status}}"
+          echo "Repo: ${{github.action_repository}}"
+          echo "Base Ref: ${{github.base_ref}}"
+          echo "ENV: ${{ toJSON(env) }}"
+          echo "Job: ${{ toJSON(job) }}"
+          echo "Steps: ${{ toJSON(steps) }}"
+          echo "Runner: ${{ toJSON(runner) }}"
+          echo "OS: ${RUNNER_OS}"
+          echo "::endgroup::"
+          echo "::notice:: ${{github.actor}} has triggered CI"
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup
+        run: npm i -g pnpm @antfu/ni
+      - name: Clean Install
+        run: nci
+      - name: Lint
+        run: nr lint --if-present
+      - name: Cancel Workflow
+        if: failure()
+        uses: andymckay/cancel-action@0.4
+
+  success:
+    name: success
+    if: ( !failure() )
     runs-on: ubuntu-latest
     needs:
-      - test
+      - unit
+      - metrics
+      - lint
 
     steps:
       - name: Success
         run: |
           echo ":rocket: tests run successfully"
           echo "::notice status=success::Tests and Linting completed successfully. The changes in this commit versus last can be found at: ${{ github.event.compare }}"
+
+  failure:
+    name: failure
+    if: failure()
+    runs-on: ubuntu-latest
+    needs:
+        - unit
+        - metrics
+        - lint
+
+    steps:
+      - name: "Analyze Failure"
+        continue-on-error: true
+        run: |
+            echo "::error::Testing has failed"
+            
+            # Check individual job results
+            LINT_STATUS="${{ needs.lint.result }}"
+            METRICS_STATUS="${{ needs.metrics.result }}"
+            UNIT_STATUS="${{ needs.unit.result }}"
+            
+            FAILED_JOBS=()
+            CANCELLED_JOBS=()
+            WARN_JOBS=()
+
+            # Check each job status
+            if [ "$LINT_STATUS" == "failure" ]; then
+                FAILED_JOBS+=("lint testing")
+                echo "::error::Linter failed!"
+            fi
+            if [ "$LINT_STATUS" == "cancelled" ]; then
+                CANCELLED_JOBS+=("Linter")
+                echo "::warning::Linter failed so cancelling the other test tasks (so we can fail fast)"
+            fi
+
+            
+            if [ "$METRICS_STATUS" == "failure" ]; then
+                FAILED_JOBS+=("metrics")
+                echo "::error::metrics production failed"
+            fi
+            
+            if [ "$UNIT_STATUS" == "failure" ]; then
+                UNIT_STATUS+=("unit testing")
+                echo "::error::JSR Publishing job failed"
+            fi
+            
+          
+            # Create summary
+            if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
+                IFS=", "
+                FAILED_LIST="${FAILED_JOBS[*]}"
+                echo "::notice::Failed jobs: $FAILED_LIST"
+            elif [ ${#CANCELLED_JOBS[@]} -gt 0 ]; then
+                echo "::warning::Job has been cancelled"
+            else
+                echo "::info::No specific job failures detected, but workflow failed overall"
+            fi

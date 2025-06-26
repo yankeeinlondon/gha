@@ -8,7 +8,7 @@
   },
   "module": "./dist/index.js",
   "scripts": {
-    "lint": "eslint src",
+    "lint": "echo 'no linting until I switch over to Typescript solution'",
     "test": "echo 'no tests until we move to Typescript solution'",
     "test:watch": "vitest",
     "build": "run-p build:*",

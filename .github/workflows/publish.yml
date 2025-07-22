@@ -214,7 +214,7 @@ jobs:
           echo "::notice::Ready to publish to the following registry platforms: ${{ steps.platform-detection.outputs.platforms }}"
 
   cancel_if_all_skipped:
-    name: cancel
+    name: cancel publish
     if: needs.detect_platforms.outputs.all_skipped == 'true'
     needs:
       - detect_platforms
@@ -442,7 +442,7 @@ jobs:
           fi
           
       - name: Publish to JSR
-        run: npx jsr publish
+        run: npx jsr publish --allow-slow-types
 
   publish_github:
     name: Github Packages

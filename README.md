@@ -133,6 +133,13 @@ Both NPM and JSR expect you to manually publish once before you're ready to publ
 - on JSR you'll run `npx jsr publish`
   - a browser will will open and you'll need to login and press the authorize button
 
+On Github Packages you'll need to add a `.npmrc.github` file which looks like;
+
+```txt
+PACKAGE_NAME:registry=https://npm.pkg.github.com/
+//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+```
+
 #### CI/CD Publication
 
 - to publish to **NPM** you must:

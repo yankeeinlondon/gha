@@ -23,6 +23,9 @@ jobs:
     if: contains(github.event.head_commit.message, 'release v')
     needs: test  # This ensures tests pass before publishing
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
+    # with:
+    #   jsr_scope: '@myorg'              # Optional: scope for JSR if package.json has root-level name
+    #   github_packages_scope: '@myorg'   # Optional: scope for GitHub Packages if package.json has root-level name
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
@@ -88,6 +91,33 @@ The possible targets for publishing are:
 
 - it's worth noting that both **JSR** and **Github Packages** require all packages to be published under a namespace 
 - in contrast, NPM has both "root level" packages and namespaced ones
+
+### Publishing Root-Level NPM Packages with Scoped JSR/GitHub Packages
+
+If your package.json has a root-level name (e.g., `my-package`) but you want to publish to JSR and GitHub Packages with a scope, you can use the `jsr_scope` and `github_packages_scope` inputs:
+
+```yml
+jobs:
+  publish:
+    name: publish
+    if: contains(github.event.head_commit.message, 'release v')
+    uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
+    with:
+      jsr_scope: '@myorg'              # Will publish as @myorg/my-package to JSR
+      github_packages_scope: '@myorg'   # Will publish as @myorg/my-package to GitHub Packages
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+This allows you to:
+- Publish to NPM as a root-level package: `my-package`
+- Publish to JSR with a scope: `@myorg/my-package`
+- Publish to GitHub Packages with a scope: `@myorg/my-package`
+
+**How it works:**
+- For **NPM**: Always uses the name from package.json as-is
+- For **JSR**: If package.json has a root-level name and `jsr_scope` is provided, updates jsr.json with the scoped name
+- For **GitHub Packages**: If package.json has a root-level name and `github_packages_scope` is provided, temporarily modifies package.json during publishing (then restores it)
 
 ### Requirements by Platform
 

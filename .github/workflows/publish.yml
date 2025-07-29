@@ -45,6 +45,16 @@ on:
         type: boolean
         default: false
         required: false
+      jsr_scope:
+        type: string
+        description: "Scope to use for JSR publishing if package.json has a root-level name (e.g., '@myorg')"
+        default: ""
+        required: false
+      github_packages_scope:
+        type: string
+        description: "Scope to use for GitHub Packages if package.json has a root-level name (e.g., '@myorg')"
+        default: ""
+        required: false
 
     secrets:
       gh_token:
@@ -347,35 +357,54 @@ jobs:
           version: latest
       - run: pnpm install --frozen-lockfile
       
+      - name: Handle JSR Package Naming
+        id: jsr-naming
+        run: |
+          # Get package name from package.json
+          PACKAGE_JSON_NAME=$(cat package.json | jq -r '.name')
+          echo "Package.json name: $PACKAGE_JSON_NAME"
+          
+          # Check if it's a root-level package (no @ prefix)
+          if [[ "$PACKAGE_JSON_NAME" =~ ^@ ]]; then
+            echo "Package is already scoped"
+            JSR_PACKAGE_NAME="$PACKAGE_JSON_NAME"
+          else
+            # Root-level package - check if scope is provided
+            if [ -n "${{ inputs.jsr_scope }}" ]; then
+              # Ensure scope starts with @
+              SCOPE="${{ inputs.jsr_scope }}"
+              if [[ ! "$SCOPE" =~ ^@ ]]; then
+                SCOPE="@$SCOPE"
+              fi
+              JSR_PACKAGE_NAME="$SCOPE/$PACKAGE_JSON_NAME"
+              echo "::notice::Using scoped name for JSR: $JSR_PACKAGE_NAME"
+            else
+              echo "::warning::Root-level package detected but no jsr_scope provided. JSR requires scoped packages."
+              echo "::warning::You may need to manually update jsr.json with a scoped name."
+              JSR_PACKAGE_NAME="$PACKAGE_JSON_NAME"
+            fi
+          fi
+          
+          echo "jsr_package_name=$JSR_PACKAGE_NAME" >> $GITHUB_OUTPUT
+          
+          # Update or validate jsr.json
+          if [ -f "jsr.json" ]; then
+            CURRENT_JSR_NAME=$(cat jsr.json | jq -r '.name // empty')
+            if [ "$CURRENT_JSR_NAME" != "$JSR_PACKAGE_NAME" ]; then
+              echo "Updating jsr.json with package name: $JSR_PACKAGE_NAME"
+              jq --arg name "$JSR_PACKAGE_NAME" '.name = $name' jsr.json > jsr.json.tmp && mv jsr.json.tmp jsr.json
+            fi
+          fi
+          
       - name: Check JSR Package Existence
         id: jsr-check
         run: |
-          # Extract package name from jsr.json or deno.json
-          PACKAGE_NAME=""
-          
-          # Check jsr.json first
-          if [ -f "jsr.json" ] || [ -f "jsr.jsonc" ]; then
-            if [ -f "jsr.json" ]; then
-              PACKAGE_NAME=$(cat jsr.json | jq -r '.name // empty')
-            else
-              PACKAGE_NAME=$(cat jsr.jsonc | jq -r '.name // empty')
-            fi
-          fi
-          
-          # If not found, check deno.json
-          if [ -z "$PACKAGE_NAME" ]; then
-            if [ -f "deno.json" ] || [ -f "deno.jsonc" ]; then
-              if [ -f "deno.json" ]; then
-                PACKAGE_NAME=$(cat deno.json | jq -r '.name // empty')
-              else
-                PACKAGE_NAME=$(cat deno.jsonc | jq -r '.name // empty')
-              fi
-            fi
-          fi
+          # Use the processed package name
+          PACKAGE_NAME="${{ steps.jsr-naming.outputs.jsr_package_name }}"
           
           # Validate package name
           if [ -z "$PACKAGE_NAME" ]; then
-            echo "::error::Could not extract package name from jsr.json or deno.json"
+            echo "::error::Could not determine JSR package name"
             exit 1
           fi
           
@@ -475,6 +504,40 @@ jobs:
         run: pnpm install
       - name: Build
         run: nr build
+      - name: Handle GitHub Packages Naming
+        id: github-naming
+        run: |
+          # Get package name from package.json
+          PACKAGE_JSON_NAME=$(cat package.json | jq -r '.name')
+          echo "Original package.json name: $PACKAGE_JSON_NAME"
+          
+          # Check if it's a root-level package (no @ prefix)
+          if [[ "$PACKAGE_JSON_NAME" =~ ^@ ]]; then
+            echo "Package is already scoped, no changes needed"
+          else
+            # Root-level package - check if scope is provided
+            if [ -n "${{ inputs.github_packages_scope }}" ]; then
+              # Ensure scope starts with @
+              SCOPE="${{ inputs.github_packages_scope }}"
+              if [[ ! "$SCOPE" =~ ^@ ]]; then
+                SCOPE="@$SCOPE"
+              fi
+              NEW_PACKAGE_NAME="$SCOPE/$PACKAGE_JSON_NAME"
+              echo "::notice::Temporarily updating package.json for GitHub Packages: $NEW_PACKAGE_NAME"
+              
+              # Create backup of original package.json
+              cp package.json package.json.backup
+              
+              # Update package.json with scoped name
+              jq --arg name "$NEW_PACKAGE_NAME" '.name = $name' package.json > package.json.tmp && mv package.json.tmp package.json
+              
+              echo "package_modified=true" >> $GITHUB_OUTPUT
+            else
+              echo "::warning::Root-level package detected but no github_packages_scope provided."
+              echo "::warning::GitHub Packages requires scoped packages. Publishing may fail."
+              echo "package_modified=false" >> $GITHUB_OUTPUT
+            fi
+          fi
       - name: Verify GitHub Packages Authentication
         run: |
           echo "Testing GitHub Packages registry access..."
@@ -497,6 +560,12 @@ jobs:
         run: npm publish --registry https://npm.pkg.github.com/
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Restore Original Package.json
+        if: steps.github-naming.outputs.package_modified == 'true'
+        run: |
+          echo "Restoring original package.json"
+          mv package.json.backup package.json
+          echo "✅ Original package.json restored"
 
   publish_success:
     name: "Published"

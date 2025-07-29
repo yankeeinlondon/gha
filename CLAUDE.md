@@ -62,6 +62,9 @@ pnpm release  # Uses bumpp to create a new release
 - Handles authentication for each platform
 - Creates changelog entries on successful publish
 - Removes tags on failure to allow retry
+- Supports publishing root-level NPM packages with scoped names on JSR/GitHub Packages
+  - Use `jsr_scope` and `github_packages_scope` inputs to specify scopes
+  - Automatically handles package name transformations for each platform
 
 ## Important Notes
 

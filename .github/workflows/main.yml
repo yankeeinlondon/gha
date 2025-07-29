@@ -8,6 +8,10 @@ jobs:
   test:
     name: testing
     uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+    # Example: To test only on Linux with Node 20.x, uncomment below:
+    # with:
+    #   os: 'ubuntu-latest'
+    #   nodeVersion: '20.x'
 
   publish:    
     name: publish

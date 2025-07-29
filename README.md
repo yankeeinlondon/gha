@@ -27,6 +27,54 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
 
+### Customizing Test Configuration
+
+The test workflow supports both single and matrix configurations for OS and Node versions.
+
+#### Single OS and Node Version (Fast CI)
+
+For faster CI runs, you can test on a single OS with a single Node version:
+
+```yml
+jobs:
+  test:
+    name: testing
+    uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+    with:
+      os: 'ubuntu-latest'
+      nodeVersion: '20.x'
+```
+
+#### Custom Matrix Configuration
+
+You can customize which operating systems and Node versions to test:
+
+```yml
+jobs:
+  test:
+    name: testing
+    uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+    with:
+      os: '["ubuntu-latest", "windows-latest"]'  # Skip macOS
+      nodeVersion: '["18.x", "20.x", "22.x"]'     # Test more Node versions
+```
+
+#### Linux-Only Testing
+
+A common configuration is to test only on Linux with multiple Node versions:
+
+```yml
+jobs:
+  test:
+    name: testing
+    uses: yankeeinlondon/gha/.github/workflows/test.yml@main
+    with:
+      os: '["ubuntu-latest"]'
+      nodeVersion: '["20.x", "22.x"]'
+```
+
+**Note:** The workflow automatically detects whether to use a single job or matrix strategy based on your inputs. When both `os` and `nodeVersion` are single values (not arrays), it runs a single test job for better performance.
+
 
 ## Platforms
 

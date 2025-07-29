@@ -28,5 +28,3 @@ describe("publish.yml is valid", () => {
 
 })
 
-
-

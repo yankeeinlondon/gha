@@ -8,8 +8,7 @@
   },
   "module": "./dist/index.js",
   "scripts": {
-    "lint": "echo 'no linting until I switch over to Typescript solution'",
-    "test": "vitest run",
+    "lint": "vitest run",
     "build": "echo 'no build process is necessary'",
     "release": "bumpp"
   },

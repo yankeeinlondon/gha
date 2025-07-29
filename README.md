@@ -24,8 +24,8 @@ jobs:
     needs: test  # This ensures tests pass before publishing
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
     # with:
-    #   jsr_scope: '@myorg'              # Optional: scope for JSR if package.json has root-level name
-    #   github_packages_scope: '@myorg'   # Optional: scope for GitHub Packages if package.json has root-level name
+    #   jsr_scope: '@org'              # Optional: scope for JSR if package.json has root-level name
+    #   github_packages_scope: '@org'   # Optional: scope for GitHub Packages if package.json has root-level name
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
@@ -103,18 +103,20 @@ jobs:
     if: contains(github.event.head_commit.message, 'release v')
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
     with:
-      jsr_scope: '@myorg'              # Will publish as @myorg/my-package to JSR
-      github_packages_scope: '@myorg'   # Will publish as @myorg/my-package to GitHub Packages
+      jsr_scope: '@org'              # Will publish as @org/my-package to JSR
+      github_packages_scope: '@org'   # Will publish as @org/my-package to GitHub Packages
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
 
 This allows you to:
+
 - Publish to NPM as a root-level package: `my-package`
-- Publish to JSR with a scope: `@myorg/my-package`
-- Publish to GitHub Packages with a scope: `@myorg/my-package`
+- Publish to JSR with a scope: `@org/my-package`
+- Publish to GitHub Packages with a scope: `@org/my-package`
 
 **How it works:**
+
 - For **NPM**: Always uses the name from package.json as-is
 - For **JSR**: If package.json has a root-level name and `jsr_scope` is provided, updates jsr.json with the scoped name
 - For **GitHub Packages**: If package.json has a root-level name and `github_packages_scope` is provided, temporarily modifies package.json during publishing (then restores it)

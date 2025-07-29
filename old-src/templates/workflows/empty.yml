@@ -1,9 +1,0 @@
-name: Empty Workflow
-on:
-  workflow_dispatch:
-jobs:
-  nothing:
-    runs-on: ubuntu-latest
-    steps:
-      - name: No-op step
-        run: echo "This is a minimal workflow"

@@ -55,18 +55,37 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has_coverage: ${{ steps.check.outputs.has_coverage }}
+      has_unit: ${{ steps.check.outputs.has_unit }}
+      has_lint: ${{ steps.check.outputs.has_lint }}
     steps:
       - uses: actions/checkout@v4
       - name: Check for coverage script
         id: check
         run: |
-          if jq -e '.scripts.coverage' package.json > /dev/null 2>&1; then
-            echo "has_coverage=true" >> $GITHUB_OUTPUT
-            echo "::notice::Coverage script found in package.json"
-          else
-            echo "has_coverage=false" >> $GITHUB_OUTPUT
-            echo "::notice::No coverage script found in package.json, coverage job will be skipped"
-          fi
+            if jq -e '.scripts.coverage' package.json > /dev/null 2>&1; then
+                echo "has_coverage=true" >> $GITHUB_OUTPUT
+                echo "::notice::Coverage script found in package.json"
+            else
+                echo "has_coverage=false" >> $GITHUB_OUTPUT
+                echo "::notice::No coverage script found in package.json, coverage job will be skipped"
+            fi
+
+            if jq -e '.scripts.test' package.json > /dev/null 2>&1; then
+                echo "has_unit=true" >> $GITHUB_OUTPUT
+                echo "::notice::Unit testing script found in package.json"
+            else
+                echo "has_coverage=false" >> $GITHUB_OUTPUT
+                echo "::notice::No unit testing script found in package.json, unit job will be skipped"
+            fi
+
+            if jq -e '.scripts.lint' package.json > /dev/null 2>&1; then
+                echo "has_lint=true" >> $GITHUB_OUTPUT
+                echo "::notice::Lint script found in package.json"
+            else
+                echo "has_coverage=false" >> $GITHUB_OUTPUT
+                echo "::notice::No coverage script found in package.json, coverage job will be skipped"
+            fi
+
           
   coverage:
     name: coverage
@@ -189,6 +208,8 @@ jobs:
 
   unit:
     name: unit tests
+    needs: check-coverage
+    if: needs.check-coverage.outputs.has_unit == 'true'
     runs-on: ${{ matrix.os }}
     env:
       VITE_GH_TOKEN: ${{ secrets.gh_token }}
@@ -233,7 +254,8 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
-
+    needs: check-coverage
+    if: needs.check-coverage.outputs.has_lint == 'true'
     steps:
       - name: Info
         run: |

@@ -53,13 +53,24 @@ The possible targets for publishing are:
 - `jsr`
 - **Github Packages**
 
+It's worth noting that both **JSR** and **Github Packages** require all packages to be published under a namespace whereas NPM has both "root level" packages and namespaced ones.
+
 ### Flow
 
 - publishing is only run when a release's commit message starts with `release v`
-- [ job: `detect_platforms` ] 
+- **job:** `detect_platforms` 
   - once it has been determined that the current commit should be published we enter an **evaluation** stage:
   - the goal of this phase is to be sure that we have _the ability_ to publish to platforms before we try
   - there is a concept of "skip files":
     - if the file `.npm-skip` is found at the root of the repo then we know that there is no intention of publishing to `npm`
-    - similarly we look for a `.jsr-skip` file for intention to publish to `jsr` and a `.
+    - similarly we look for a `.jsr-skip` file for the intention to publish to `jsr`.
+    - with Github Packages we first check that there is a `.npmrc.github` file; this is necessary for a publishing to Github Packages and will looks something like:
+
+        ```txt
+        PACKAGE_NAME:registry=https://npm.pkg.github.com/
+        //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+        ```
+
+      - With that package found in the root of the repo this flow will try to publish to **Github Packages** _unless_ it also files the `.skip-github-packages` file 
+    - each _enabled_ platform is calculated and the user is presented with a notice about which platforms we expect to publish to.
 

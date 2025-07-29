@@ -27,7 +27,48 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
 
-## Test Workflow
+
+## Platforms
+
+The possible targets for publishing are:
+
+- `npm`
+- `jsr`
+- **Github Packages**
+
+### Workspaced versus Root Packages
+
+- it's worth noting that both **JSR** and **Github Packages** require all packages to be published under a namespace 
+- in contrast, NPM has both "root level" packages and namespaced ones
+
+### Requirements by Platform
+
+#### First Time Publication
+
+Both NPM and JSR expect you to manually publish once before you're ready to publish via CI/CD:
+
+- on NPM you'll run `npm publish --access=public|private`
+  - a browser window will pop up and ask you to login, 
+  - assuming the user you've logged in as has the right permissions for the repo in question then you're first version will be published and you can shutdown the web page.
+- on JSR you'll run `npx jsr publish`
+  - a browser will will open and you'll need to login and press the authorize button
+
+#### CI/CD Publication
+
+- to publish to **NPM** you must:
+  - have an NPM token which has workflow permissions to publish
+
+- to publish to **JSR** you must:
+  - have already have an account 
+  - you must have added the workspaced package name
+  - you must have _linked_ to package to a Github repo
+  - you must have a `deno.jsonc` file or `jsr.json` file in the root of the repo
+
+
+## Workflows
+
+
+### Test Workflow
 
 A rather simple flow that tests:
 
@@ -45,17 +86,8 @@ A rather simple flow that tests:
 
 If _none_ of the above tests are available then this workflow will CANCEL the workflow and provide context on why it was cancelled.
 
-## Publish Workflow
+### Publish Workflow
 
-The possible targets for publishing are:
-
-- `npm`
-- `jsr`
-- **Github Packages**
-
-It's worth noting that both **JSR** and **Github Packages** require all packages to be published under a namespace whereas NPM has both "root level" packages and namespaced ones.
-
-### Flow
 
 - publishing is only run when a release's commit message starts with `release v`
 - **job:** `detect_platforms` 

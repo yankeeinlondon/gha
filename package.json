@@ -8,7 +8,7 @@
   },
   "module": "./dist/index.js",
   "scripts": {
-    "lint": "vitest run",
+    "test": "vitest run",
     "build": "echo 'no build process is necessary'",
     "release": "bumpp"
   },

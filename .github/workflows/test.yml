@@ -254,7 +254,7 @@ jobs:
           fi
 
   unit-single:
-    name: unit test (non-matrix)
+    name: unit (solo)
     needs: 
       - check-coverage
       - detect-configuration
@@ -295,7 +295,7 @@ jobs:
         run: pnpm test
 
   unit-matrix:
-    name: unit tests (matrix)
+    name: unit (matrix)
     needs: 
       - check-coverage
       - detect-configuration

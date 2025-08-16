@@ -93,7 +93,7 @@ jobs:
             echo "use_matrix=false" >> $GITHUB_OUTPUT
             echo "single_os=${{ inputs.os }}" >> $GITHUB_OUTPUT
             echo "single_node=${{ inputs.nodeVersion }}" >> $GITHUB_OUTPUT
-            echo "::notice::Using single job strategy for testing (OS: ${{ inputs.os }}, Node: ${{ inputs.nodeVersion }})"
+            echo "::notice::Using single job strategy for unit testing (OS: ${{ inputs.os }}, Node: ${{ inputs.nodeVersion }})"
           fi
           echo "::endgroup::"
 

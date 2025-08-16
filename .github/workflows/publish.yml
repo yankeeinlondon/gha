@@ -1,5 +1,4 @@
 name: publish
-
 on:
   workflow_call:
     inputs:
@@ -55,7 +54,6 @@ on:
         description: "Scope to use for GitHub Packages if package.json has a root-level name (e.g., '@myorg')"
         default: ""
         required: false
-
     secrets:
       gh_token:
         required: false
@@ -67,7 +65,8 @@ on:
         required: false
       NPM_TOKEN:
         required: false
-
+      JSR_TOKEN:
+        required: false
 jobs:
   detect_platforms:
     name: evaluate
@@ -83,19 +82,18 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-      
       - name: Detect Publishing Platforms
         id: platform-detection
         run: |
           echo "::group::Platform Detection"
-          
+
           # Initialize variables
           NPM=""
           JSR=""
           GITHUB_PACKAGES=""
           SKIPPED_PLATFORMS=()
           ENABLED_PLATFORMS=()
-          
+
           # NPM Detection with skip file check
           if [ -f ".skip-npm" ]; then
             echo "::notice::NPM publishing skipped - .skip-npm file detected"
@@ -113,7 +111,7 @@ jobs:
           else
             echo "ℹ️ NPM publishing not applicable - no package.json found"
           fi
-          
+
           # JSR Detection with skip file check
           if [ -f ".skip-jsr" ]; then
             echo "::notice::JSR publishing skipped - .skip-jsr file detected"
@@ -125,7 +123,7 @@ jobs:
           else
             echo "ℹ️ JSR publishing not applicable - no jsr.json or deno.json found"
           fi
-          
+
           # GitHub Packages Detection with skip file check
           if [ -f ".skip-github-packages" ]; then
             echo "::notice::GitHub Packages publishing skipped - .skip-github-packages file detected"
@@ -137,28 +135,28 @@ jobs:
           else
             echo "ℹ️ GitHub Packages publishing not applicable - no .npmrc.github found"
           fi
-          
+
           # Generate platform list
           PLATFORMS=""
           PLATFORM_ARRAY=()
           [ -n "$NPM" ] && PLATFORM_ARRAY+=("$NPM")
           [ -n "$JSR" ] && PLATFORM_ARRAY+=("$JSR")
           [ -n "$GITHUB_PACKAGES" ] && PLATFORM_ARRAY+=("$GITHUB_PACKAGES")
-          
+
           # Join array elements with comma and space
           IFS=", "
           PLATFORMS="${PLATFORM_ARRAY[*]}"
-          
+
           # Check if all platforms are skipped
           ALL_SKIPPED="false"
           if [ ${#PLATFORM_ARRAY[@]} -eq 0 ]; then
             ALL_SKIPPED="true"
           fi
-          
+
           # Check NPM token availability
           # We'll check this in a separate step because secrets can't be checked directly in shell
           HAS_NPM_TOKEN="pending"
-          
+
           # Set outputs
           echo "npm=$NPM" >> $GITHUB_OUTPUT
           echo "jsr=$JSR" >> $GITHUB_OUTPUT
@@ -166,20 +164,20 @@ jobs:
           echo "platforms=$PLATFORMS" >> $GITHUB_OUTPUT
           echo "has_npm_token=$HAS_NPM_TOKEN" >> $GITHUB_OUTPUT
           echo "all_skipped=$ALL_SKIPPED" >> $GITHUB_OUTPUT
-          
+
           # Generate comprehensive summary
           echo ""
           echo "📊 Publishing Summary:"
           echo "===================="
-          
+
           if [ ${#ENABLED_PLATFORMS[@]} -gt 0 ]; then
             echo "✅ Enabled platforms: ${ENABLED_PLATFORMS[*]}"
           fi
-          
+
           if [ ${#SKIPPED_PLATFORMS[@]} -gt 0 ]; then
             echo "⏭️  Skipped platforms: ${SKIPPED_PLATFORMS[*]}"
           fi
-          
+
           if [ "$ALL_SKIPPED" == "true" ]; then
             echo ""
             echo "::warning::All publishing platforms are skipped or not applicable!"
@@ -188,9 +186,8 @@ jobs:
             echo ""
             echo "::notice::Will publish to: $PLATFORMS"
           fi
-          
-          echo "::endgroup::"
 
+          echo "::endgroup::"
       - name: Check NPM Token Availability
         id: check-npm-token
         env:
@@ -199,7 +196,7 @@ jobs:
           echo "::group::NPM Token Check Debug"
           echo "Checking NPM_TOKEN availability..."
           echo "Length of NPM_TOKEN: ${#NPM_TOKEN}"
-          
+
           # GitHub masks secrets, so we can't see the actual value, but we can check if it exists
           if [ -z "${NPM_TOKEN}" ]; then
             echo "NPM_TOKEN is empty or not set"
@@ -216,13 +213,11 @@ jobs:
             echo "::notice::NPM_TOKEN secret is available (will be used as NODE_AUTH_TOKEN for npm)"
           fi
           echo "::endgroup::"
-
       # Remove the early NPM token check as secrets might not be available in this job
       - name: "Ready"
         run: |
           echo "ready to publish"
           echo "::notice::Ready to publish to the following registry platforms: ${{ steps.platform-detection.outputs.platforms }}"
-
   cancel_if_all_skipped:
     name: cancel publish
     if: needs.detect_platforms.outputs.all_skipped == 'true'
@@ -246,7 +241,7 @@ jobs:
           echo "  - jsr.json or deno.json for JSR"
           echo "  - .npmrc.github for GitHub Packages"
           echo ""
-          
+
           # Cancel the workflow using GitHub API
           echo "Cancelling workflow run #${{ github.run_id }}..."
           curl -X POST \
@@ -254,24 +249,23 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel"
-          
+
           # Give the API call time to process
           sleep 5
-          
+
           # Exit with error to ensure the workflow is marked as failed
           exit 1
-
   publish_npm:
     name: npm
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.npm != '' )
     needs:
       - detect_platforms
     runs-on: ubuntu-latest
-    steps: 
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0      
+          fetch-depth: 0
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -306,7 +300,7 @@ jobs:
         run: |
           PACKAGE_NAME=$(cat package.json | jq -r '.name')
           echo "Checking if package '$PACKAGE_NAME' exists on NPM..."
-          
+
           # First test without auth (public package check)
           if npm view "$PACKAGE_NAME" --json 2>/dev/null; then
             echo "✅ Package exists on NPM"
@@ -337,7 +331,6 @@ jobs:
           npm publish $ACCESS_FLAG
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
   publish_jsr:
     name: jsr
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.jsr != '' )
@@ -356,14 +349,13 @@ jobs:
         with:
           version: latest
       - run: pnpm install --frozen-lockfile
-      
       - name: Handle JSR Package Naming
         id: jsr-naming
         run: |
           # Get package name from package.json
           PACKAGE_JSON_NAME=$(cat package.json | jq -r '.name')
           echo "Package.json name: $PACKAGE_JSON_NAME"
-          
+
           # Check if it's a root-level package (no @ prefix)
           if [[ "$PACKAGE_JSON_NAME" =~ ^@ ]]; then
             echo "Package is already scoped"
@@ -384,9 +376,9 @@ jobs:
               JSR_PACKAGE_NAME="$PACKAGE_JSON_NAME"
             fi
           fi
-          
+
           echo "jsr_package_name=$JSR_PACKAGE_NAME" >> $GITHUB_OUTPUT
-          
+
           # Update or validate jsr.json
           if [ -f "jsr.json" ]; then
             CURRENT_JSR_NAME=$(cat jsr.json | jq -r '.name // empty')
@@ -395,50 +387,49 @@ jobs:
               jq --arg name "$JSR_PACKAGE_NAME" '.name = $name' jsr.json > jsr.json.tmp && mv jsr.json.tmp jsr.json
             fi
           fi
-          
       - name: Check JSR Package Existence
         id: jsr-check
         run: |
           # Use the processed package name
           PACKAGE_NAME="${{ steps.jsr-naming.outputs.jsr_package_name }}"
-          
+
           # Validate package name
           if [ -z "$PACKAGE_NAME" ]; then
             echo "::error::Could not determine JSR package name"
             exit 1
           fi
-          
+
           echo "Checking if package '$PACKAGE_NAME' exists on JSR..."
-          
+
           # Check if package exists on JSR
           # JSR API endpoint format: https://api.jsr.io/packages/{scope}/{name}
           # Extract scope and name from package name (format: @scope/name)
           SCOPE=$(echo "$PACKAGE_NAME" | cut -d'/' -f1 | sed 's/@//')
           NAME=$(echo "$PACKAGE_NAME" | cut -d'/' -f2)
-          
+
           if [ -z "$SCOPE" ] || [ -z "$NAME" ]; then
             echo "::error::Invalid package name format. Expected @scope/name, got: $PACKAGE_NAME"
             exit 1
           fi
-          
+
           echo "::group::JSR Package Check"
           echo "Package name: $PACKAGE_NAME"
           echo "Parsed scope: $SCOPE"
           echo "Parsed name: $NAME"
-          
+
           # Check using JSR API endpoint
           API_URL="https://api.jsr.io/scopes/$SCOPE/packages/$NAME"
           WEB_URL="https://jsr.io/@$SCOPE/$NAME"
           echo "Checking JSR API: $API_URL"
           echo "Web URL: $WEB_URL"
-          
+
           # First try the API endpoint
           API_RESPONSE=$(curl -s -w "\n%{http_code}" "$API_URL")
           API_STATUS=$(echo "$API_RESPONSE" | tail -n1)
           API_BODY=$(echo "$API_RESPONSE" | head -n-1)
-          
+
           echo "API Status: $API_STATUS"
-          
+
           # If API doesn't work, try web URL with browser headers
           if [ "$API_STATUS" != "200" ] && [ "$API_STATUS" != "404" ]; then
             echo "API check inconclusive, trying web URL with browser headers..."
@@ -450,9 +441,9 @@ jobs:
           else
             HTTP_STATUS="$API_STATUS"
           fi
-          
+
           echo "::endgroup::"
-          
+
           # Check if package exists based on status
           if [ "$API_STATUS" = "200" ] || [ "$HTTP_STATUS" = "200" ]; then
             echo "✅ Package $PACKAGE_NAME exists on JSR"
@@ -469,9 +460,17 @@ jobs:
             echo "::notice::Could not determine package existence (API: $API_STATUS, Web: $HTTP_STATUS) - proceeding with publish"
             echo "package_exists=unknown" >> $GITHUB_OUTPUT
           fi
-          
       - name: Publish to JSR
-        run: npx jsr publish --allow-slow-types
+        run: |
+          if [ -n "${{ secrets.JSR_TOKEN }}" ]; then
+            echo "Using token authentication for JSR"
+            npx jsr publish --allow-slow-types --token=${{ secrets.JSR_TOKEN }}
+          else
+            echo "Using OIDC authentication for JSR"
+            npx jsr publish --allow-slow-types
+          fi
+        env:
+          JSR_TOKEN: ${{ secrets.JSR_TOKEN }}
 
   publish_github:
     name: Github Packages
@@ -479,7 +478,6 @@ jobs:
     needs:
       - detect_platforms
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
       packages: write
@@ -493,7 +491,7 @@ jobs:
           version: latest
       - name: Install pnpm
         run: npm i -g pnpm @antfu/ni
-      - name: Setup GitHub Packages registry  
+      - name: Setup GitHub Packages registry
         run: |
           echo "Before copying .npmrc.github:"
           cat .npmrc.github
@@ -506,38 +504,7 @@ jobs:
         run: nr build
       - name: Handle GitHub Packages Naming
         id: github-naming
-        run: |
-          # Get package name from package.json
-          PACKAGE_JSON_NAME=$(cat package.json | jq -r '.name')
-          echo "Original package.json name: $PACKAGE_JSON_NAME"
-          
-          # Check if it's a root-level package (no @ prefix)
-          if [[ "$PACKAGE_JSON_NAME" =~ ^@ ]]; then
-            echo "Package is already scoped, no changes needed"
-          else
-            # Root-level package - check if scope is provided
-            if [ -n "${{ inputs.github_packages_scope }}" ]; then
-              # Ensure scope starts with @
-              SCOPE="${{ inputs.github_packages_scope }}"
-              if [[ ! "$SCOPE" =~ ^@ ]]; then
-                SCOPE="@$SCOPE"
-              fi
-              NEW_PACKAGE_NAME="$SCOPE/$PACKAGE_JSON_NAME"
-              echo "::notice::Temporarily updating package.json for GitHub Packages: $NEW_PACKAGE_NAME"
-              
-              # Create backup of original package.json
-              cp package.json package.json.backup
-              
-              # Update package.json with scoped name
-              jq --arg name "$NEW_PACKAGE_NAME" '.name = $name' package.json > package.json.tmp && mv package.json.tmp package.json
-              
-              echo "package_modified=true" >> $GITHUB_OUTPUT
-            else
-              echo "::warning::Root-level package detected but no github_packages_scope provided."
-              echo "::warning::GitHub Packages requires scoped packages. Publishing may fail."
-              echo "package_modified=false" >> $GITHUB_OUTPUT
-            fi
-          fi
+        run: "# Get package name from package.json\nPACKAGE_JSON_NAME=$(cat package.json | jq -r '.name')\necho \"Original package.json name: $PACKAGE_JSON_NAME\"\n\n# Check if it's a root-level package (no @ prefix)\nif [[ \"$PACKAGE_JSON_NAME\" =~ ^@ ]]; then\n  echo \"Package is already scoped, no changes needed\"\nelse\n  # Root-level package - check if scope is provided\n  if [ -n \"${{ inputs.github_packages_scope }}\" ]; then\n    # Ensure scope starts with @\n    SCOPE=\"${{ inputs.github_packages_scope }}\"\n    if [[ ! \"$SCOPE\" =~ ^@ ]]; then\n      SCOPE=\"@$SCOPE\"\n    fi\n    NEW_PACKAGE_NAME=\"$SCOPE/$PACKAGE_JSON_NAME\"\n    echo \"::notice::Temporarily updating package.json for GitHub Packages: $NEW_PACKAGE_NAME\"\n    \n    # Create backup of original package.json\n    cp package.json package.json.backup\n    \n    # Update package.json with scoped name\n    jq --arg name \"$NEW_PACKAGE_NAME\" '.name = $name' package.json > package.json.tmp && mv package.json.tmp package.json\n    \n    echo \"package_modified=true\" >> $GITHUB_OUTPUT\n  else\n    echo \"::warning::Root-level package detected but no github_packages_scope provided.\"\n    echo \"::warning::GitHub Packages requires scoped packages. Publishing may fail.\"\n    echo \"package_modified=false\" >> $GITHUB_OUTPUT\n  fi\nfi\n"
       - name: Verify GitHub Packages Authentication
         run: |
           echo "Testing GitHub Packages registry access..."
@@ -566,7 +533,6 @@ jobs:
           echo "Restoring original package.json"
           mv package.json.backup package.json
           echo "✅ Original package.json restored"
-
   publish_success:
     name: "Published"
     if: ( !failure() && contains(github.event.head_commit.message, 'release v') )
@@ -594,7 +560,6 @@ jobs:
           PLATFORMS: ${{ needs.detect_platforms.outputs.platforms }}
         run: |
           echo "::notice :: ${{ github.actor }} published from ${{github.ref_type}} ${{ github.ref_name }} to ${{ env.PLATFORMS }} and updated the repo's changelog entry 🚀"
-
   publish_failure:
     name: "Failure"
     if: ( failure() && contains(github.event.head_commit.message, 'release v') )
@@ -615,36 +580,36 @@ jobs:
         continue-on-error: true
         run: |
           echo "::error::Publication workflow failed"
-          
+
           # Check individual job results
           DETECT_STATUS="${{ needs.detect_platforms.result }}"
           NPM_STATUS="${{ needs.publish_npm.result }}"
           JSR_STATUS="${{ needs.publish_jsr.result }}"
           GITHUB_STATUS="${{ needs.publish_github.result }}"
-          
+
           FAILED_JOBS=()
-          
+
           # Check each job status
           if [ "$DETECT_STATUS" == "failure" ]; then
             FAILED_JOBS+=("Platform Detection")
             echo "::error::Platform Detection (early error detection) job failed"
           fi
-          
+
           if [ "$NPM_STATUS" == "failure" ]; then
             FAILED_JOBS+=("NPM Publishing")
             echo "::error::NPM Publishing job failed"
           fi
-          
+
           if [ "$JSR_STATUS" == "failure" ]; then
             FAILED_JOBS+=("JSR Publishing")
             echo "::error::JSR Publishing job failed"
           fi
-          
+
           if [ "$GITHUB_STATUS" == "failure" ]; then
             FAILED_JOBS+=("GitHub Packages Publishing")
             echo "::error::GitHub Packages Publishing job failed"
           fi
-          
+
           # Create summary
           if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
             IFS=", "
@@ -654,36 +619,35 @@ jobs:
           else
             echo "::warning::No specific job failures detected, but workflow failed overall"
           fi
-          
       - name: "Remove Tag"
         continue-on-error: true
         run: |
           echo "Publication failed. Looking for tag to remove..."
-          
+
           # Since workflow is triggered by commit message "release v", we need to find the tag
           # First, try to extract version from commit message
           COMMIT_MSG="${{ github.event.head_commit.message }}"
           echo "Commit message: $COMMIT_MSG"
-          
+
           # Extract version from commit message (e.g., "release v1.2.3" -> "v1.2.3")
           TAG_FROM_MSG=$(echo "$COMMIT_MSG" | grep -o "release v[0-9][^[:space:]]*" | sed 's/release //')
-          
+
           # Also try to get version from package.json
           PACKAGE_VERSION=$(cat package.json | jq -r '.version')
           TAG_FROM_PACKAGE="v$PACKAGE_VERSION"
-          
+
           echo "Tag from commit message: $TAG_FROM_MSG"
           echo "Tag from package.json: $TAG_FROM_PACKAGE"
-          
+
           # Use commit message tag if available, otherwise package.json
           if [ -n "$TAG_FROM_MSG" ]; then
             TAG="$TAG_FROM_MSG"
           else
             TAG="$TAG_FROM_PACKAGE"
           fi
-          
+
           echo "Attempting to remove tag: $TAG"
-          
+
           # Check if the tag exists
           if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
             echo "Tag ${TAG} exists, removing it..."

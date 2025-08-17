@@ -463,3 +463,11 @@ jobs:
             else
                 echo "::info::No specific job failures detected, but workflow failed overall"
             fi
+  handle_cancelled:
+    name: Cancelled
+    if: cancelled()
+    runs-on: ubuntu-latest
+    steps:  # ✅ Add steps array
+      - name: Log Cancellation  # ✅ Each step needs a name (optional but recommended)
+        run: |  # ✅ Now run is valid inside a step
+            echo "::error title=🚨 LINT FAILURE - ALL TESTS WILL BE CANCELLED::The linter has failed. Due to fail-fast, all matrix test jobs will be cancelled. Fix linting errors first!"

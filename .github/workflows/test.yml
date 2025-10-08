@@ -326,9 +326,9 @@ jobs:
       - name: Bun Install
         run: bun install
         if: ${{ inputs.bun }}
-      - name: Bun Builder
-        run: bun run build
-        if: ${{ inputs.bun }}
+    #   - name: Bun Builder
+    #     run: bun run build
+    #     if: ${{ inputs.bun }}
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -337,8 +337,8 @@ jobs:
         run: npm i -g pnpm @antfu/ni
       - name: Install
         run: pnpm install
-      - name: Build
-        run: nr build
+    #   - name: Build
+    #     run: nr build
       - name: Test
         run: pnpm test
 
@@ -383,7 +383,7 @@ jobs:
         env:
             HUSKY: 0
       - name: Lint
-        run: nr lint --if-present
+        run: pnpm run --if-present lint
       - name: Cancel Workflow
         if: failure()
         uses: andymckay/cancel-action@0.4

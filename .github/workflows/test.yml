@@ -379,7 +379,7 @@ jobs:
       - name: Setup
         run: npm i -g pnpm @antfu/ni
       - name: Clean Install
-        run: nci
+        run: pnpm install
         env:
             HUSKY: 0
       - name: Lint

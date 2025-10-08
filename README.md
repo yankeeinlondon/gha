@@ -83,9 +83,9 @@ jobs:
 
 The possible targets for publishing are:
 
-- `npm`
-- `jsr`
-- **Github Packages**
+- [`npm`](https://www.npmjs.com/)
+- [`jsr`](https://jsr.io/)
+- [**Github Packages**](https://docs.github.com/en/packages/learn-github-packages/introduction-to-github-packages)
 
 ### Workspaced versus Root Packages
 

@@ -193,3 +193,6 @@ If _none_ of the above tests are available then this workflow will CANCEL the wo
       - With that package found in the root of the repo this flow will try to publish to **Github Packages** _unless_ it also files the `.skip-github-packages` file 
     - each _enabled_ platform is calculated and the user is presented with a notice about which platforms we expect to publish to.
 
+### Optional Configuration
+
+1. `Bun` - if you want the bun executable to be in the environment you'll set the `bun` input variable to `true` in the `with` grouping.

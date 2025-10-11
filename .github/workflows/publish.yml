@@ -490,7 +490,7 @@ jobs:
         with:
           version: latest
       - name: Install pnpm
-        run: npm i -g pnpm @antfu/ni
+        run: npm i -g pnpm @antfu/ni bun
       - name: Setup GitHub Packages registry
         run: |
           echo "Before copying .npmrc.github:"

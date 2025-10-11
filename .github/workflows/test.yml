@@ -275,7 +275,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        if: ${{ inputs.bun }}
+        # if: ${{ inputs.bun }}
       - name: Bun Install
         run: bun install
         if: ${{ inputs.bun }}
@@ -322,7 +322,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        if: ${{ inputs.bun }}
+        # if: ${{ inputs.bun }}
       - name: Bun Install
         run: bun install
         if: ${{ inputs.bun }}
@@ -334,7 +334,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Setup
-        run: npm i -g pnpm @antfu/ni bun
+        run: npm i -g pnpm @antfu/ni 
       - name: Install
         run: pnpm install
     #   - name: Build

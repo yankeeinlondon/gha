@@ -322,13 +322,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        # if: ${{ inputs.bun }}
+      - name: Env Info
+        run: |
+            bun --version
+            node --version
       - name: Bun Install
         run: bun install
         if: ${{ inputs.bun }}
-    #   - name: Bun Builder
-    #     run: bun run build
-    #     if: ${{ inputs.bun }}
+      - name: Bun Builder
+        run: bun run build
+        if: ${{ inputs.bun }}
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:

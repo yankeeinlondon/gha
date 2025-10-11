@@ -195,4 +195,6 @@ If _none_ of the above tests are available then this workflow will CANCEL the wo
 
 ### Optional Configuration
 
-1. `Bun` - if you want the bun executable to be in the environment you'll set the `bun` input variable to `true` in the `with` grouping.
+1. `Bun` - if you want the bun to _install_ and _build_ the project set the `bun` input variable to `true` in the `with` grouping.
+   - Note: regardless of whether you set this flag, Bun will be made available in the test environment so if you need to run some Typescript scripts directly this should be available.
+

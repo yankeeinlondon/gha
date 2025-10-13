@@ -201,8 +201,7 @@ jobs:
           if [ -z "${NPM_TOKEN}" ]; then
             echo "NPM_TOKEN is empty or not set"
             echo "has_npm_token=false" >> $GITHUB_OUTPUT
-            echo "::warning::NPM_TOKEN secret is not available or empty"
-            echo "::warning::NPM authentication requires NPM_TOKEN secret to be set"
+            echo "::warning::NPM_TOKEN secret is not available or empty%0ANPM authentication requires NPM_TOKEN secret to be set"
           elif [ "${NPM_TOKEN}" = "" ]; then
             echo "NPM_TOKEN is an empty string"
             echo "has_npm_token=false" >> $GITHUB_OUTPUT
@@ -298,9 +297,7 @@ jobs:
             echo "::group::NPM Token Check"
             echo "Checking if NPM_TOKEN was passed to this job..."
             if [ -z "$NODE_AUTH_TOKEN" ]; then
-                echo "::error::NPM_TOKEN secret is not available in the publish job!"
-                echo "::error::Please ensure NPM_TOKEN is set in your repository secrets"
-                echo "::error::and passed correctly in the workflow call"
+                echo "::error::NPM_TOKEN secret is not available in the publish job!%0APlease ensure NPM_TOKEN is set in your repository secrets%0Aand passed correctly in the workflow call"
                 exit 1
             else
                 echo "✅ NPM_TOKEN is available (length: ${#NODE_AUTH_TOKEN})"
@@ -384,8 +381,7 @@ jobs:
               JSR_PACKAGE_NAME="$SCOPE/$PACKAGE_JSON_NAME"
               echo "::notice::Using scoped name for JSR: $JSR_PACKAGE_NAME"
             else
-              echo "::warning::Root-level package detected but no jsr_scope provided. JSR requires scoped packages."
-              echo "::warning::You may need to manually update jsr.json with a scoped name."
+              echo "::warning::Root-level package detected but no jsr_scope provided. JSR requires scoped packages.%0AYou may need to manually update jsr.json with a scoped name."
               JSR_PACKAGE_NAME="$PACKAGE_JSON_NAME"
             fi
           fi
@@ -462,12 +458,7 @@ jobs:
             echo "✅ Package $PACKAGE_NAME exists on JSR"
             echo "package_exists=true" >> $GITHUB_OUTPUT
           elif [ "$API_STATUS" = "404" ] || [ "$HTTP_STATUS" = "404" ]; then
-            echo "::warning::Package '$PACKAGE_NAME' not found on JSR (404)"
-            echo "::warning::To register this package on JSR:"
-            echo "::warning::1. Visit https://jsr.io"
-            echo "::warning::2. Sign in with your GitHub account"
-            echo "::warning::3. Create a new package with the name: $PACKAGE_NAME"
-            echo "::warning::Will attempt to publish anyway - it might be a new package"
+            echo "::warning::Package '$PACKAGE_NAME' not found on JSR (404)%0ATo register this package on JSR:%0A1. Visit https://jsr.io%0A2. Sign in with your GitHub account%0A3. Create a new package with the name: $PACKAGE_NAME%0AWill attempt to publish anyway - it might be a new package"
             echo "package_exists=false" >> $GITHUB_OUTPUT
           else
             echo "::notice::Could not determine package existence (API: $API_STATUS, Web: $HTTP_STATUS) - proceeding with publish"
@@ -544,8 +535,7 @@ jobs:
               
               echo "package_modified=true" >> $GITHUB_OUTPUT
             else
-              echo "::warning::Root-level package detected but no github_packages_scope provided."
-              echo "::warning::GitHub Packages requires scoped packages. Publishing may fail."
+              echo "::warning::Root-level package detected but no github_packages_scope provided.%0AGitHub Packages requires scoped packages. Publishing may fail."
               echo "package_modified=false" >> $GITHUB_OUTPUT
             fi
           fi

@@ -18,7 +18,7 @@ describe("test.yml is valid", () => {
             console.log(`workflow: ${data.name}`);
             console.log(`jobs: \n\t- ${Object.keys(data.jobs).join("\n\t- ")}`)
         } catch (e) {
-            throw new Error(`YAML error: ${e.message}`)
+            throw new Error(`YAML error: ${e instanceof Error ? e.message : String(e)}`)
         }
 
         expect(true).toBe(true);

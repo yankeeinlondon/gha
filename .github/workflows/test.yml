@@ -1,480 +1,489 @@
 name: test
 
 on:
-  workflow_call:
-    inputs:
-      os:
-        type: string
-        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
-        description: "OS to test on - single string (e.g. 'ubuntu-latest') or JSON array (e.g. '[\"ubuntu-latest\", \"windows-latest\"]')"
-        required: false
-      nodeVersion:
-        type: string
-        default: '["20.x", "22.x"]'
-        description: "Node version(s) to test - single string (e.g. '20.x') or JSON array (e.g. '[\"20.x\", \"22.x\"]')"
-        required: false
-      failFast:
-        type: boolean
-        default: false
-        required: false
-      api_token:
-        type: string
-        description: "allows an API token to be passed to testing as API_TOKEN and VITE_API_TOKEN"
-        default: ""
-        required: false
-      gh_token:
-        description: "allows a Github personal access token to be passed to testing as GH_TOKEN and VITE_GH_TOKEN"
-        type: string
-        default: ""
-        required: false
-      bitbucket_token:
-        type: string
-        default: ""
-        required: false
-      gitlab_token:
-        type: string
-        default: ""
-        required: false
-      bun:
-        type: boolean
-        default: false
-        required: false
-
-    secrets:
-      gh_token:
-        required: false
-      bitbucket_token:
-        required: false
-      gitlab_token:
-        required: false
-      api_token:
-        required: false
+    workflow_call:
+        inputs:
+            os:
+                type: string
+                default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+                description: 'OS to test on - single string (e.g. ''ubuntu-latest'') or JSON array (e.g. ''["ubuntu-latest", "windows-latest"]'')'
+                required: false
+            nodeVersion:
+                type: string
+                default: '["20.x", "22.x"]'
+                description: 'Node version(s) to test - single string (e.g. ''20.x'') or JSON array (e.g. ''["20.x", "22.x"]'')'
+                required: false
+            failFast:
+                type: boolean
+                default: false
+                required: false
+            api_token:
+                type: string
+                description: "allows an API token to be passed to testing as API_TOKEN and VITE_API_TOKEN"
+                default: ""
+                required: false
+            gh_token:
+                description: "allows a Github personal access token to be passed to testing as GH_TOKEN and VITE_GH_TOKEN"
+                type: string
+                default: ""
+                required: false
+            bitbucket_token:
+                type: string
+                default: ""
+                required: false
+            gitlab_token:
+                type: string
+                default: ""
+                required: false
+            bun:
+                type: boolean
+                default: false
+                required: false
+            transpile:
+                description: "Indicates whether there is a need to transpile code to JS before testing"
+                type: boolean
+                default: false
+                required: false
+        secrets:
+            gh_token:
+                required: false
+            bitbucket_token:
+                required: false
+            gitlab_token:
+                required: false
+            api_token:
+                required: false
 
 jobs:
+    detect-configuration:
+        name: detect config
+        runs-on: ubuntu-latest
+        outputs:
+            use_matrix: ${{ steps.detect.outputs.use_matrix }}
+            single_os: ${{ steps.detect.outputs.single_os }}
+            single_node: ${{ steps.detect.outputs.single_node }}
+        steps:
+            - name: Detect Matrix vs Single Configuration
+              id: detect
+              run: |
+                  echo "::group::Configuration Detection"
+                  echo "OS input: ${{ inputs.os }}"
+                  echo "Node input: ${{ inputs.nodeVersion }}"
 
-  detect-configuration:
-    name: detect config
-    runs-on: ubuntu-latest
-    outputs:
-      use_matrix: ${{ steps.detect.outputs.use_matrix }}
-      single_os: ${{ steps.detect.outputs.single_os }}
-      single_node: ${{ steps.detect.outputs.single_node }}
-    steps:
-      - name: Detect Matrix vs Single Configuration
-        id: detect
-        run: |
-          echo "::group::Configuration Detection"
-          echo "OS input: ${{ inputs.os }}"
-          echo "Node input: ${{ inputs.nodeVersion }}"
-          
-          # Check if inputs contain array syntax
-          OS_IS_ARRAY=false
-          NODE_IS_ARRAY=false
-          
-          if [[ "${{ inputs.os }}" == *"["* ]]; then
-            OS_IS_ARRAY=true
-            echo "OS is configured as array"
-          else
-            echo "OS is configured as single value"
-          fi
-          
-          if [[ "${{ inputs.nodeVersion }}" == *"["* ]]; then
-            NODE_IS_ARRAY=true
-            echo "Node is configured as array"
-          else
-            echo "Node is configured as single value"
-          fi
-          
-          # Determine if we need matrix
-          if [ "$OS_IS_ARRAY" = "true" ] || [ "$NODE_IS_ARRAY" = "true" ]; then
-            echo "use_matrix=true" >> $GITHUB_OUTPUT
-            echo "::notice::Using matrix strategy for testing"
-          else
-            echo "use_matrix=false" >> $GITHUB_OUTPUT
-            echo "single_os=${{ inputs.os }}" >> $GITHUB_OUTPUT
-            echo "single_node=${{ inputs.nodeVersion }}" >> $GITHUB_OUTPUT
-            echo "::notice::Using single job strategy for unit testing (OS: ${{ inputs.os }}, Node: ${{ inputs.nodeVersion }})"
-          fi
-          echo "::endgroup::"
+                  # Check if inputs contain array syntax
+                  OS_IS_ARRAY=false
+                  NODE_IS_ARRAY=false
 
-  check-coverage:
-    name: check
-    runs-on: ubuntu-latest
-    outputs:
-      has_coverage: ${{ steps.check.outputs.has_coverage }}
-      has_unit: ${{ steps.check.outputs.has_unit }}
-      has_lint: ${{ steps.check.outputs.has_lint }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check for coverage script
-        id: check
-        run: |
-            if jq -e '.scripts.coverage' package.json > /dev/null 2>&1; then
-                echo "has_coverage=true" >> $GITHUB_OUTPUT
-                echo "::notice::Coverage script found in package.json"
-            else
-                echo "has_coverage=false" >> $GITHUB_OUTPUT
-                echo "::notice::No coverage script found in package.json, coverage job will be skipped"
-            fi
+                  if [[ "${{ inputs.os }}" == *"["* ]]; then
+                    OS_IS_ARRAY=true
+                    echo "OS is configured as array"
+                  else
+                    echo "OS is configured as single value"
+                  fi
 
-            if jq -e '.scripts.test' package.json > /dev/null 2>&1; then
-                echo "has_unit=true" >> $GITHUB_OUTPUT
-                echo "::notice::Unit testing script found in package.json"
-            else
-                echo "has_coverage=false" >> $GITHUB_OUTPUT
-                echo "::notice::No unit testing script found in package.json, unit job will be skipped"
-            fi
+                  if [[ "${{ inputs.nodeVersion }}" == *"["* ]]; then
+                    NODE_IS_ARRAY=true
+                    echo "Node is configured as array"
+                  else
+                    echo "Node is configured as single value"
+                  fi
 
-            if jq -e '.scripts.lint' package.json > /dev/null 2>&1; then
-                echo "has_lint=true" >> $GITHUB_OUTPUT
-                echo "::notice::Lint script found in package.json"
-            else
-                echo "has_coverage=false" >> $GITHUB_OUTPUT
-                echo "::notice::No coverage script found in package.json, coverage job will be skipped"
-            fi
+                  # Determine if we need matrix
+                  if [ "$OS_IS_ARRAY" = "true" ] || [ "$NODE_IS_ARRAY" = "true" ]; then
+                    echo "use_matrix=true" >> $GITHUB_OUTPUT
+                    echo "::notice::Using matrix strategy for testing"
+                  else
+                    echo "use_matrix=false" >> $GITHUB_OUTPUT
+                    echo "single_os=${{ inputs.os }}" >> $GITHUB_OUTPUT
+                    echo "single_node=${{ inputs.nodeVersion }}" >> $GITHUB_OUTPUT
+                    echo "::notice::Using single job strategy for unit testing (OS: ${{ inputs.os }}, Node: ${{ inputs.nodeVersion }})"
+                  fi
+                  echo "::endgroup::"
 
-          
-  coverage:
-    name: coverage
-    needs: check-coverage
-    if: needs.check-coverage.outputs.has_coverage == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-      - name: Setup
-        run: npm i -g pnpm @antfu/ni
-      - name: Install
-        run: pnpm install
-      - name: Build
-        run: nr build
-      - name: Run coverage
-        run: pnpm coverage
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: |
-            coverage/
-            !coverage/tmp/
-      - name: Coverage summary
-        run: |
-          # Try to find coverage data from various sources
-          COVERAGE_FOUND=false
-          
-          # Check for coverage-summary.json (Jest, NYC)
-          if [ -f "coverage/coverage-summary.json" ]; then
-            echo "Found coverage-summary.json"
-            COVERAGE=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
-            echo "## Test Coverage Report 📊" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Overall Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Type | Coverage |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|----------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Lines | $(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Statements | $(jq -r '.total.statements.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Functions | $(jq -r '.total.functions.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Branches | $(jq -r '.total.branches.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
-            
-            echo "::notice::Test coverage: ${COVERAGE}%"
-            COVERAGE_FOUND=true
-            
-          # Check for coverage-final.json (Vitest, c8)
-          elif [ -f "coverage/coverage-final.json" ]; then
-            echo "Found coverage-final.json (Vitest format)"
-            
-            # For Vitest, we need to calculate totals from coverage-final.json
-            # This file contains per-file coverage data, so we'll aggregate it
-            TOTALS=$(jq -r '
-              [.[] |
-                {
-                  lines: (.s | to_entries | length),
-                  covered_lines: (.s | to_entries | map(select(.value > 0)) | length),
-                  statements: (.statementMap | to_entries | length),
-                  covered_statements: ([.s | to_entries | .[] | select(.value > 0)] | length),
-                  functions: (.fnMap | to_entries | length),
-                  covered_functions: ([.f | to_entries | .[] | select(.value > 0)] | length),
-                  # For branches: each branch has an array of counters (usually 2 for if/else)
-                  # Count total possible branches and covered branches correctly
-                  branch_items: (.b | to_entries | map(.value | length) | add // 0),
-                  covered_branch_items: (.b | to_entries | map(.value | map(select(. > 0)) | length) | add // 0)
-                }
-              ] |
-              {
-                lines: (map(.lines) | add // 0),
-                covered_lines: (map(.covered_lines) | add // 0),
-                statements: (map(.statements) | add // 0),
-                covered_statements: (map(.covered_statements) | add // 0),
-                functions: (map(.functions) | add // 0),
-                covered_functions: (map(.covered_functions) | add // 0),
-                branches: (map(.branch_items) | add // 0),
-                covered_branches: (map(.covered_branch_items) | add // 0)
-              } |
-              {
-                lines_pct: (if .lines > 0 then (.covered_lines / .lines * 100) else 0 end),
-                statements_pct: (if .statements > 0 then (.covered_statements / .statements * 100) else 0 end),
-                functions_pct: (if .functions > 0 then (.covered_functions / .functions * 100) else 0 end),
-                branches_pct: (if .branches > 0 then (.covered_branches / .branches * 100) else 0 end)
-              }
-            ' coverage/coverage-final.json 2>/dev/null || echo '{}')
-            
-            if [ "$TOTALS" != "{}" ] && [ "$TOTALS" != "null" ]; then
-              COVERAGE=$(echo "$TOTALS" | jq -r '.lines_pct // 0' | xargs printf "%.2f")
-              STMT_COV=$(echo "$TOTALS" | jq -r '.statements_pct // 0' | xargs printf "%.2f")
-              FUNC_COV=$(echo "$TOTALS" | jq -r '.functions_pct // 0' | xargs printf "%.2f")
-              BRANCH_COV=$(echo "$TOTALS" | jq -r '.branches_pct // 0' | xargs printf "%.2f")
-              
-              echo "## Test Coverage Report 📊" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "**Overall Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "| Type | Coverage |" >> $GITHUB_STEP_SUMMARY
-              echo "|------|----------|" >> $GITHUB_STEP_SUMMARY
-              echo "| Lines | ${COVERAGE}% |" >> $GITHUB_STEP_SUMMARY
-              echo "| Statements | ${STMT_COV}% |" >> $GITHUB_STEP_SUMMARY
-              echo "| Functions | ${FUNC_COV}% |" >> $GITHUB_STEP_SUMMARY
-              echo "| Branches | ${BRANCH_COV}% |" >> $GITHUB_STEP_SUMMARY
-              
-              echo "::notice::Test coverage: ${COVERAGE}%"
-              COVERAGE_FOUND=true
-            fi
-          fi
-          
-          # Also check for text-based coverage report
-          if [ -f "coverage/lcov-report/index.html" ] || [ -f "coverage/index.html" ]; then
-            echo "::notice::HTML coverage report available in artifacts"
-          fi
-          
-          if [ "$COVERAGE_FOUND" = "false" ]; then
-            echo "::warning::Coverage data not found in expected formats (coverage-summary.json or coverage-final.json)"
-            echo "::notice::Available files in coverage directory:"
-            ls -la coverage/ 2>/dev/null || echo "Coverage directory not found"
-          fi
+    check-coverage:
+        name: check
+        runs-on: ubuntu-latest
+        outputs:
+            has_coverage: ${{ steps.check.outputs.has_coverage }}
+            has_unit: ${{ steps.check.outputs.has_unit }}
+            has_lint: ${{ steps.check.outputs.has_lint }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Check for coverage script
+              id: check
+              run: |
+                  if jq -e '.scripts.coverage' package.json > /dev/null 2>&1; then
+                      echo "has_coverage=true" >> $GITHUB_OUTPUT
+                      echo "::notice::Coverage script found in package.json"
+                  else
+                      echo "has_coverage=false" >> $GITHUB_OUTPUT
+                      echo "::notice::No coverage script found in package.json, coverage job will be skipped"
+                  fi
 
-  unit-single:
-    name: unit (solo)
-    needs: 
-      - check-coverage
-      - detect-configuration
-    if: needs.check-coverage.outputs.has_unit == 'true' && needs.detect-configuration.outputs.use_matrix == 'false'
-    runs-on: ${{ needs.detect-configuration.outputs.single_os }}
-    env:
-      VITE_GH_TOKEN: ${{ secrets.gh_token }}
-      GH_TOKEN: ${{ secrets.gh_token }}
-      VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
-      BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
-      VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
-      GITLAB_TOKEN: ${{ secrets.gitlab_token }}
-      API_TOKEN: ${{ secrets.api_token }}
-      VITE_API_TOKEN: ${{ secrets.api_token }}
-      OS: ${{ github.env.RUNNER_OS }}
-      
+                  if jq -e '.scripts.test' package.json > /dev/null 2>&1; then
+                      echo "has_unit=true" >> $GITHUB_OUTPUT
+                      echo "::notice::Unit testing script found in package.json"
+                  else
+                      echo "has_unit=false" >> $GITHUB_OUTPUT
+                      echo "::notice::No unit testing script found in package.json, unit job will be skipped"
+                  fi
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        # if: ${{ inputs.bun }}
-      - name: Bun Install
-        run: bun install
-        if: ${{ inputs.bun }}
-      - name: Bun Builder
-        run: bun run build
-        if: ${{ inputs.bun }}
-      - name: Use Node.js ${{ needs.detect-configuration.outputs.single_node }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ needs.detect-configuration.outputs.single_node }}
-      - name: Setup
-        run: npm i -g pnpm @antfu/ni
-      - name: Install
-        run: pnpm install
-      - name: Build
-        run: nr build
-      - name: Test
-        run: pnpm test
+                  if jq -e '.scripts.lint' package.json > /dev/null 2>&1; then
+                      echo "has_lint=true" >> $GITHUB_OUTPUT
+                      echo "::notice::Lint script found in package.json"
+                  else
+                      echo "has_coverage=false" >> $GITHUB_OUTPUT
+                      echo "::notice::No coverage script found in package.json, coverage job will be skipped"
+                  fi
 
-  unit-matrix:
-    name: unit (matrix)
-    needs: 
-      - check-coverage
-      - detect-configuration
-    if: needs.check-coverage.outputs.has_unit == 'true' && needs.detect-configuration.outputs.use_matrix == 'true'
-    runs-on: ${{ matrix.os }}
-    env:
-      VITE_GH_TOKEN: ${{ secrets.gh_token }}
-      GH_TOKEN: ${{ secrets.gh_token }}
-      VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
-      BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
-      VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
-      GITLAB_TOKEN: ${{ secrets.gitlab_token }}
-      API_TOKEN: ${{ secrets.api_token }}
-      VITE_API_TOKEN: ${{ secrets.api_token }}
-      OS: ${{ github.env.RUNNER_OS }}
-      HUSKY: 0
-    strategy:
-      matrix:
-        node-version: ${{ fromJSON(inputs.nodeVersion) }}
-        os: ${{ fromJSON(inputs.os) }}
-      fail-fast: ${{ inputs.failFast }}
+    coverage:
+        name: coverage
+        needs: check-coverage
+        if: needs.check-coverage.outputs.has_coverage == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Setup Node
+              uses: actions/setup-node@v4
+            - name: Setup
+              run: npm i -g pnpm @antfu/ni
+            - name: Install
+              run: pnpm install
+            - name: Build
+              run: nr build
+            - name: Run coverage
+              run: pnpm coverage
+            - name: Upload coverage reports
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: |
+                      coverage/
+                      !coverage/tmp/
+            - name: Coverage summary
+              run: |
+                  # Try to find coverage data from various sources
+                  COVERAGE_FOUND=false
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Env Info
-        run: |
-            bun --version
-            node --version
-      - name: Bun Install
-        run: bun install
-        if: ${{ inputs.bun }}
-      - name: Bun Builder
-        run: bun run build
-        if: ${{ inputs.bun }}
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Setup
-        run: npm i -g pnpm @antfu/ni 
-      - name: Install
-        run: pnpm install
-    #   - name: Build
-    #     run: nr build
-      - name: Test
-        run: pnpm test
+                  # Check for coverage-summary.json (Jest, NYC)
+                  if [ -f "coverage/coverage-summary.json" ]; then
+                    echo "Found coverage-summary.json"
+                    COVERAGE=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
+                    echo "## Test Coverage Report 📊" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Overall Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "| Type | Coverage |" >> $GITHUB_STEP_SUMMARY
+                    echo "|------|----------|" >> $GITHUB_STEP_SUMMARY
+                    echo "| Lines | $(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+                    echo "| Statements | $(jq -r '.total.statements.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+                    echo "| Functions | $(jq -r '.total.functions.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+                    echo "| Branches | $(jq -r '.total.branches.pct // 0' coverage/coverage-summary.json)% |" >> $GITHUB_STEP_SUMMARY
+                    
+                    echo "::notice::Test coverage: ${COVERAGE}%"
+                    COVERAGE_FOUND=true
+                    
+                  # Check for coverage-final.json (Vitest, c8)
+                  elif [ -f "coverage/coverage-final.json" ]; then
+                    echo "Found coverage-final.json (Vitest format)"
+                    
+                    # For Vitest, we need to calculate totals from coverage-final.json
+                    # This file contains per-file coverage data, so we'll aggregate it
+                    TOTALS=$(jq -r '
+                      [.[] |
+                        {
+                          lines: (.s | to_entries | length),
+                          covered_lines: (.s | to_entries | map(select(.value > 0)) | length),
+                          statements: (.statementMap | to_entries | length),
+                          covered_statements: ([.s | to_entries | .[] | select(.value > 0)] | length),
+                          functions: (.fnMap | to_entries | length),
+                          covered_functions: ([.f | to_entries | .[] | select(.value > 0)] | length),
+                          # For branches: each branch has an array of counters (usually 2 for if/else)
+                          # Count total possible branches and covered branches correctly
+                          branch_items: (.b | to_entries | map(.value | length) | add // 0),
+                          covered_branch_items: (.b | to_entries | map(.value | map(select(. > 0)) | length) | add // 0)
+                        }
+                      ] |
+                      {
+                        lines: (map(.lines) | add // 0),
+                        covered_lines: (map(.covered_lines) | add // 0),
+                        statements: (map(.statements) | add // 0),
+                        covered_statements: (map(.covered_statements) | add // 0),
+                        functions: (map(.functions) | add // 0),
+                        covered_functions: (map(.covered_functions) | add // 0),
+                        branches: (map(.branch_items) | add // 0),
+                        covered_branches: (map(.covered_branch_items) | add // 0)
+                      } |
+                      {
+                        lines_pct: (if .lines > 0 then (.covered_lines / .lines * 100) else 0 end),
+                        statements_pct: (if .statements > 0 then (.covered_statements / .statements * 100) else 0 end),
+                        functions_pct: (if .functions > 0 then (.covered_functions / .functions * 100) else 0 end),
+                        branches_pct: (if .branches > 0 then (.covered_branches / .branches * 100) else 0 end)
+                      }
+                    ' coverage/coverage-final.json 2>/dev/null || echo '{}')
+                    
+                    if [ "$TOTALS" != "{}" ] && [ "$TOTALS" != "null" ]; then
+                      COVERAGE=$(echo "$TOTALS" | jq -r '.lines_pct // 0' | xargs printf "%.2f")
+                      STMT_COV=$(echo "$TOTALS" | jq -r '.statements_pct // 0' | xargs printf "%.2f")
+                      FUNC_COV=$(echo "$TOTALS" | jq -r '.functions_pct // 0' | xargs printf "%.2f")
+                      BRANCH_COV=$(echo "$TOTALS" | jq -r '.branches_pct // 0' | xargs printf "%.2f")
+                      
+                      echo "## Test Coverage Report 📊" >> $GITHUB_STEP_SUMMARY
+                      echo "" >> $GITHUB_STEP_SUMMARY
+                      echo "**Overall Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+                      echo "" >> $GITHUB_STEP_SUMMARY
+                      echo "| Type | Coverage |" >> $GITHUB_STEP_SUMMARY
+                      echo "|------|----------|" >> $GITHUB_STEP_SUMMARY
+                      echo "| Lines | ${COVERAGE}% |" >> $GITHUB_STEP_SUMMARY
+                      echo "| Statements | ${STMT_COV}% |" >> $GITHUB_STEP_SUMMARY
+                      echo "| Functions | ${FUNC_COV}% |" >> $GITHUB_STEP_SUMMARY
+                      echo "| Branches | ${BRANCH_COV}% |" >> $GITHUB_STEP_SUMMARY
+                      
+                      echo "::notice::Test coverage: ${COVERAGE}%"
+                      COVERAGE_FOUND=true
+                    fi
+                  fi
 
+                  # Also check for text-based coverage report
+                  if [ -f "coverage/lcov-report/index.html" ] || [ -f "coverage/index.html" ]; then
+                    echo "::notice::HTML coverage report available in artifacts"
+                  fi
 
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    needs: check-coverage
-    if: needs.check-coverage.outputs.has_lint == 'true'
-    steps:
-      - name: Info
-        run: |
-          echo "::group::Info"
-          echo "Commit Msg: '${{github.event.head_commit.message}}'"
-          echo "Actor: ${{github.actor}}"
-          echo "Event Name: ${{github.event_name}}"
-          echo "Event Path: ${{github.event_path}}"
-          echo "HEAD Ref: ${{github.head_ref}}"
-          echo "Ref Name: ${{github.ref_name}}"
-          echo "Ref Type: ${{github.ref_type}}"
-          echo "Workflow: ${{github.workflow}}"
-          echo "Workspace: ${{github.workspace}}"
-          echo "Action: ${{github.action}}"
-          echo "Action Path: ${{github.action_path}}"
-          echo "Action Ref: ${{github.action_ref}}"
-          echo "Action Status: ${{github.action_status}}"
-          echo "Repo: ${{github.action_repository}}"
-          echo "Base Ref: ${{github.base_ref}}"
-          echo "ENV: ${{ toJSON(env) }}"
-          echo "Job: ${{ toJSON(job) }}"
-          echo "Steps: ${{ toJSON(steps) }}"
-          echo "Runner: ${{ toJSON(runner) }}"
-          echo "OS: ${RUNNER_OS}"
-          echo "::endgroup::"
-          echo "::notice:: ${{github.actor}} has triggered CI"
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      - name: Setup
-        run: npm i -g pnpm @antfu/ni
-      - name: Clean Install
-        run: pnpm install
+                  if [ "$COVERAGE_FOUND" = "false" ]; then
+                    echo "::warning::Coverage data not found in expected formats (coverage-summary.json or coverage-final.json)"
+                    echo "::notice::Available files in coverage directory:"
+                    ls -la coverage/ 2>/dev/null || echo "Coverage directory not found"
+                  fi
+
+    unit-single:
+        name: unit (solo)
+        needs:
+            - check-coverage
+            - detect-configuration
+        if: needs.check-coverage.outputs.has_unit == 'true' && needs.detect-configuration.outputs.use_matrix == 'false'
+        runs-on: ${{ needs.detect-configuration.outputs.single_os }}
         env:
+            VITE_GH_TOKEN: ${{ secrets.gh_token }}
+            GH_TOKEN: ${{ secrets.gh_token }}
+            VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+            BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+            VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+            GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+            API_TOKEN: ${{ secrets.api_token }}
+            VITE_API_TOKEN: ${{ secrets.api_token }}
+            OS: ${{ github.env.RUNNER_OS }}
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
+              # if: ${{ inputs.bun }}
+            - name: Use Node.js ${{ needs.detect-configuration.outputs.single_node }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ needs.detect-configuration.outputs.single_node }}
+            - name: Setup
+              run: npm i -g pnpm
+
+            - name: Install Deps (bun)
+              if: ${{ inputs.bun }}
+              run: bun install
+            - name: Install Deps (pnpm)
+              if: ${{ !inputs.bun }}
+              run: pnpm install
+
+            - name: Build (pnpm)
+              run: pnpm build
+              if: ${{ inputs.transpile }} && ${{ !inputs.bun }}
+            - name: Build (bun)
+              run: bun run build
+              if: ${{ inputs.transpile }} && ${{ inputs.bun }}
+
+            - name: Test
+              run: pnpm test
+
+    unit-matrix:
+        name: unit (matrix)
+        needs:
+            - check-coverage
+            - detect-configuration
+        if: needs.check-coverage.outputs.has_unit == 'true' && needs.detect-configuration.outputs.use_matrix == 'true'
+        runs-on: ${{ matrix.os }}
+        env:
+            VITE_GH_TOKEN: ${{ secrets.gh_token }}
+            GH_TOKEN: ${{ secrets.gh_token }}
+            VITE_BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+            BITBUCKET_TOKEN: ${{ secrets.bitbucket_token }}
+            VITE_GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+            GITLAB_TOKEN: ${{ secrets.gitlab_token }}
+            API_TOKEN: ${{ secrets.api_token }}
+            VITE_API_TOKEN: ${{ secrets.api_token }}
+            OS: ${{ github.env.RUNNER_OS }}
             HUSKY: 0
-      - name: Lint
-        run: pnpm run --if-present lint
-      - name: Cancel Workflow
+        strategy:
+            matrix:
+                node-version: ${{ fromJSON(inputs.nodeVersion) }}
+                os: ${{ fromJSON(inputs.os) }}
+            fail-fast: ${{ inputs.failFast }}
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install pnpm
+              run: npm i -g pnpm 
+              if: ${{ !inputs.bun }}
+
+            - name: Install Deps (bun)
+              if: ${{ inputs.bun }}
+              run: bun install
+            - name: Install Deps (pnpm)
+              if: ${{ !inputs.bun }}
+              run: pnpm install
+
+            - name: Build (pnpm)
+              run: pnpm build
+              if: ${{ inputs.transpile }} && ${{ !inputs.bun }}
+            - name: Build (bun)
+              run: bun run build
+              if: ${{ inputs.transpile }} && ${{ inputs.bun }}
+
+            - name: Test
+              run: pnpm test
+
+    lint:
+        name: lint
+        runs-on: ubuntu-latest
+        needs: check-coverage
+        if: needs.check-coverage.outputs.has_lint == 'true'
+        steps:
+            - name: Info
+              run: |
+                  echo "::group::Info"
+                  echo "Commit Msg: '${{github.event.head_commit.message}}'"
+                  echo "Actor: ${{github.actor}}"
+                  echo "Event Name: ${{github.event_name}}"
+                  echo "Event Path: ${{github.event_path}}"
+                  echo "HEAD Ref: ${{github.head_ref}}"
+                  echo "Ref Name: ${{github.ref_name}}"
+                  echo "Ref Type: ${{github.ref_type}}"
+                  echo "Workflow: ${{github.workflow}}"
+                  echo "Workspace: ${{github.workspace}}"
+                  echo "Action: ${{github.action}}"
+                  echo "Action Path: ${{github.action_path}}"
+                  echo "Action Ref: ${{github.action_ref}}"
+                  echo "Action Status: ${{github.action_status}}"
+                  echo "Repo: ${{github.action_repository}}"
+                  echo "Base Ref: ${{github.base_ref}}"
+                  echo "ENV: ${{ toJSON(env) }}"
+                  echo "Job: ${{ toJSON(job) }}"
+                  echo "Steps: ${{ toJSON(steps) }}"
+                  echo "Runner: ${{ toJSON(runner) }}"
+                  echo "OS: ${RUNNER_OS}"
+                  echo "::endgroup::"
+                  echo "::notice:: ${{github.actor}} has triggered CI"
+            - name: Checkout Code
+              uses: actions/checkout@v4
+            - name: Setup
+              run: npm i -g pnpm @antfu/ni
+            - name: Clean Install
+              run: pnpm install
+              env:
+                  HUSKY: 0
+            - name: Lint
+              run: pnpm run --if-present lint
+            - name: Cancel Workflow
+              if: failure()
+              uses: andymckay/cancel-action@0.4
+
+    success:
+        name: success
+        if: ( !failure() && !cancelled() )
+        runs-on: ubuntu-latest
+        needs:
+            - unit-single
+            - unit-matrix
+            - coverage
+            - lint
+            - check-coverage
+            - detect-configuration
+
+        steps:
+            - name: Success
+              run: |
+                  echo ":rocket: tests run successfully"
+                  echo "::notice status=success::Tests and Linting completed successfully. The changes in this commit versus last can be found at: ${{ github.event.compare }}"
+
+    failure:
+        name: failure
         if: failure()
-        uses: andymckay/cancel-action@0.4
+        runs-on: ubuntu-latest
+        needs:
+            - unit-single
+            - unit-matrix
+            - coverage
+            - lint
 
-  success:
-    name: success
-    if: ( !failure() && !cancelled() )
-    runs-on: ubuntu-latest
-    needs:
-      - unit-single
-      - unit-matrix
-      - coverage
-      - lint
-      - check-coverage
-      - detect-configuration
+        steps:
+            - name: "Analyze Failure"
+              continue-on-error: true
+              run: |
+                  echo "::error::Testing has failed"
 
-    steps:
-      - name: Success
-        run: |
-          echo ":rocket: tests run successfully"
-          echo "::notice status=success::Tests and Linting completed successfully. The changes in this commit versus last can be found at: ${{ github.event.compare }}"
+                  # Check individual job results
+                  LINT_STATUS="${{ needs.lint.result }}"
+                  COVERAGE_STATUS="${{ needs.coverage.result }}"
+                  UNIT_SINGLE_STATUS="${{ needs.unit-single.result }}"
+                  UNIT_MATRIX_STATUS="${{ needs.unit-matrix.result }}"
 
-  failure:
-    name: failure
-    if: failure()
-    runs-on: ubuntu-latest
-    needs:
-      - unit-single
-      - unit-matrix
-      - coverage
-      - lint
+                  FAILED_JOBS=()
+                  CANCELLED_JOBS=()
+                  WARN_JOBS=()
 
-    steps:
-      - name: "Analyze Failure"
-        continue-on-error: true
-        run: |
-            echo "::error::Testing has failed"
-            
-            # Check individual job results
-            LINT_STATUS="${{ needs.lint.result }}"
-            COVERAGE_STATUS="${{ needs.coverage.result }}"
-            UNIT_SINGLE_STATUS="${{ needs.unit-single.result }}"
-            UNIT_MATRIX_STATUS="${{ needs.unit-matrix.result }}"
-            
-            FAILED_JOBS=()
-            CANCELLED_JOBS=()
-            WARN_JOBS=()
+                  # Check each job status
+                  if [ "$LINT_STATUS" == "failure" ]; then
+                      FAILED_JOBS+=("lint testing")
+                      echo "::error::Linter failed!"
+                  fi
+                  if [ "$LINT_STATUS" == "cancelled" ]; then
+                      CANCELLED_JOBS+=("Linter")
+                      echo "::warning::Linter failed so cancelling the other test tasks (so we can fail fast)"
+                  fi
 
-            # Check each job status
-            if [ "$LINT_STATUS" == "failure" ]; then
-                FAILED_JOBS+=("lint testing")
-                echo "::error::Linter failed!"
-            fi
-            if [ "$LINT_STATUS" == "cancelled" ]; then
-                CANCELLED_JOBS+=("Linter")
-                echo "::warning::Linter failed so cancelling the other test tasks (so we can fail fast)"
-            fi
 
-            
-            if [ "$COVERAGE_STATUS" == "failure" ]; then
-                FAILED_JOBS+=("coverage")
-                echo "::error::coverage tests failed"
-            fi
-            if [ "$COVERAGE_STATUS" == "skipped" ]; then
-                echo "::notice::Coverage was skipped (no coverage script in package.json)"
-            fi
-            
-            if [ "$UNIT_SINGLE_STATUS" == "failure" ] || [ "$UNIT_MATRIX_STATUS" == "failure" ]; then
-                FAILED_JOBS+=("unit testing")
-                echo "::error::Unit testing job failed"
-            fi
-            
-          
-            # Create summary
-            if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
-                IFS=", "
-                FAILED_LIST="${FAILED_JOBS[*]}"
-                echo "::notice::Failed jobs: $FAILED_LIST"
-            elif [ ${#CANCELLED_JOBS[@]} -gt 0 ]; then
-                echo "::warning::Job has been cancelled"
-            else
-                echo "::info::No specific job failures detected, but workflow failed overall"
-            fi
-  handle_cancelled:
-    name: Cancelled
-    if: cancelled()
-    runs-on: ubuntu-latest
-    steps:  # ✅ Add steps array
-      - name: Linter Cancelled  # ✅ Each step needs a name (optional but recommended)
-        run: |  # ✅ Now run is valid inside a step
-            echo "::error title=🚨 LINT FAILURE - ALL TESTS WILL BE CANCELLED::The linter has failed. Due to fail-fast, all matrix test jobs will be cancelled. Fix linting errors first!"
+                  if [ "$COVERAGE_STATUS" == "failure" ]; then
+                      FAILED_JOBS+=("coverage")
+                      echo "::error::coverage tests failed"
+                  fi
+                  if [ "$COVERAGE_STATUS" == "skipped" ]; then
+                      echo "::notice::Coverage was skipped (no coverage script in package.json)"
+                  fi
+
+                  if [ "$UNIT_SINGLE_STATUS" == "failure" ] || [ "$UNIT_MATRIX_STATUS" == "failure" ]; then
+                      FAILED_JOBS+=("unit testing")
+                      echo "::error::Unit testing job failed"
+                  fi
+
+
+                  # Create summary
+                  if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
+                      IFS=", "
+                      FAILED_LIST="${FAILED_JOBS[*]}"
+                      echo "::notice::Failed jobs: $FAILED_LIST"
+                  elif [ ${#CANCELLED_JOBS[@]} -gt 0 ]; then
+                      echo "::warning::Job has been cancelled"
+                  else
+                      echo "::info::No specific job failures detected, but workflow failed overall"
+                  fi
+    handle_cancelled:
+        name: Cancelled
+        if: cancelled()
+        runs-on: ubuntu-latest
+        steps: # ✅ Add steps array
+            - name: Linter Cancelled # ✅ Each step needs a name (optional but recommended)
+              run: | # ✅ Now run is valid inside a step
+                  echo "::error title=🚨 LINT FAILURE - ALL TESTS WILL BE CANCELLED::The linter has failed. Due to fail-fast, all matrix test jobs will be cancelled. Fix linting errors first!"

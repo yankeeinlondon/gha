@@ -116,8 +116,8 @@ jobs:
                       echo "has_coverage=true" >> $GITHUB_OUTPUT
                       echo "::notice::Coverage script found in package.json"
                   else
-                      echo "has_coverage=false" >> $GITHUB_OUTPUT
-                      echo "::notice::No coverage script found in package.json, coverage job will be skipped"
+                      echo "has_lint=false" >> $GITHUB_OUTPUT
+                      echo "::notice::No lint script found in package.json, lint job will be skipped"
                   fi
 
                   if jq -e '.scripts.test' package.json > /dev/null 2>&1; then
@@ -132,8 +132,8 @@ jobs:
                       echo "has_lint=true" >> $GITHUB_OUTPUT
                       echo "::notice::Lint script found in package.json"
                   else
-                      echo "has_coverage=false" >> $GITHUB_OUTPUT
-                      echo "::notice::No coverage script found in package.json, coverage job will be skipped"
+                      echo "has_lint=false" >> $GITHUB_OUTPUT
+                      echo "::notice::No lint script found in package.json, lint job will be skipped"
                   fi
 
     coverage:

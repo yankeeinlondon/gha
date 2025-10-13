@@ -517,7 +517,38 @@ jobs:
         run: pnpm build
       - name: Handle GitHub Packages Naming
         id: github-naming
-        run: "# Get package name from package.json\nPACKAGE_JSON_NAME=$(cat package.json | jq -r '.name')\necho \"Original package.json name: $PACKAGE_JSON_NAME\"\n\n# Check if it's a root-level package (no @ prefix)\nif [[ \"$PACKAGE_JSON_NAME\" =~ ^@ ]]; then\n  echo \"Package is already scoped, no changes needed\"\nelse\n  # Root-level package - check if scope is provided\n  if [ -n \"${{ inputs.github_packages_scope }}\" ]; then\n    # Ensure scope starts with @\n    SCOPE=\"${{ inputs.github_packages_scope }}\"\n    if [[ ! \"$SCOPE\" =~ ^@ ]]; then\n      SCOPE=\"@$SCOPE\"\n    fi\n    NEW_PACKAGE_NAME=\"$SCOPE/$PACKAGE_JSON_NAME\"\n    echo \"::notice::Temporarily updating package.json for GitHub Packages: $NEW_PACKAGE_NAME\"\n    \n    # Create backup of original package.json\n    cp package.json package.json.backup\n    \n    # Update package.json with scoped name\n    jq --arg name \"$NEW_PACKAGE_NAME\" '.name = $name' package.json > package.json.tmp && mv package.json.tmp package.json\n    \n    echo \"package_modified=true\" >> $GITHUB_OUTPUT\n  else\n    echo \"::warning::Root-level package detected but no github_packages_scope provided.\"\n    echo \"::warning::GitHub Packages requires scoped packages. Publishing may fail.\"\n    echo \"package_modified=false\" >> $GITHUB_OUTPUT\n  fi\nfi\n"
+        run: |
+          # Get package name from package.json
+          PACKAGE_JSON_NAME=$(cat package.json | jq -r '.name')
+          echo "Original package.json name: $PACKAGE_JSON_NAME"
+
+          # Check if it's a root-level package (no @ prefix)
+          if [[ "$PACKAGE_JSON_NAME" =~ ^@ ]]; then
+            echo "Package is already scoped, no changes needed"
+          else
+            # Root-level package - check if scope is provided
+            if [ -n "${{ inputs.github_packages_scope }}" ]; then
+              # Ensure scope starts with @
+              SCOPE="${{ inputs.github_packages_scope }}"
+              if [[ ! "$SCOPE" =~ ^@ ]]; then
+                SCOPE="@$SCOPE"
+              fi
+              NEW_PACKAGE_NAME="$SCOPE/$PACKAGE_JSON_NAME"
+              echo "::notice::Temporarily updating package.json for GitHub Packages: $NEW_PACKAGE_NAME"
+              
+              # Create backup of original package.json
+              cp package.json package.json.backup
+              
+              # Update package.json with scoped name
+              jq --arg name "$NEW_PACKAGE_NAME" '.name = $name' package.json > package.json.tmp && mv package.json.tmp package.json
+              
+              echo "package_modified=true" >> $GITHUB_OUTPUT
+            else
+              echo "::warning::Root-level package detected but no github_packages_scope provided."
+              echo "::warning::GitHub Packages requires scoped packages. Publishing may fail."
+              echo "package_modified=false" >> $GITHUB_OUTPUT
+            fi
+          fi
       - name: Verify GitHub Packages Authentication
         run: |
           echo "Testing GitHub Packages registry access..."

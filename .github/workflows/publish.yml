@@ -82,6 +82,9 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
+            ref: ${{ github.ref }}
       - name: Detect Publishing Platforms
         id: platform-detection
         run: |
@@ -265,6 +268,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.ref }}
     
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
@@ -338,7 +342,7 @@ jobs:
             ACCESS_FLAG="--access ${{ steps.npm-check.outputs.access_level }}"
           fi
           echo "Publishing with access level: ${{ steps.npm-check.outputs.access_level }}"
-          pnpm publish $ACCESS_FLAG
+          pnpm publish $ACCESS_FLAG --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   publish_jsr:

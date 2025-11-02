@@ -338,7 +338,7 @@ jobs:
             ACCESS_FLAG="--access ${{ steps.npm-check.outputs.access_level }}"
           fi
           echo "Publishing with access level: ${{ steps.npm-check.outputs.access_level }}"
-          npm publish $ACCESS_FLAG
+          pnpm publish $ACCESS_FLAG
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   publish_jsr:
@@ -391,6 +391,8 @@ jobs:
           # Update or validate jsr.json
           if [ -f "jsr.json" ]; then
             CURRENT_JSR_NAME=$(cat jsr.json | jq -r '.name // empty')
+            echo "Current jsr.json name: $CURRENT_JSR_NAME"
+            echo "Expected JSR package name: $JSR_PACKAGE_NAME"
             if [ "$CURRENT_JSR_NAME" != "$JSR_PACKAGE_NAME" ]; then
               echo "Updating jsr.json with package name: $JSR_PACKAGE_NAME"
               jq --arg name "$JSR_PACKAGE_NAME" '.name = $name' jsr.json > jsr.json.tmp && mv jsr.json.tmp jsr.json
@@ -458,8 +460,48 @@ jobs:
             echo "✅ Package $PACKAGE_NAME exists on JSR"
             echo "package_exists=true" >> $GITHUB_OUTPUT
           elif [ "$API_STATUS" = "404" ] || [ "$HTTP_STATUS" = "404" ]; then
-            echo "::warning::Package '$PACKAGE_NAME' not found on JSR (404)%0ATo register this package on JSR:%0A1. Visit https://jsr.io%0A2. Sign in with your GitHub account%0A3. Create a new package with the name: $PACKAGE_NAME%0AWill attempt to publish anyway - it might be a new package"
-            echo "package_exists=false" >> $GITHUB_OUTPUT
+            # Check if jsr.json has a different name than what we're checking
+            if [ -f "jsr.json" ]; then
+              ACTUAL_JSR_NAME=$(cat jsr.json | jq -r '.name // empty')
+              if [ -n "$ACTUAL_JSR_NAME" ] && [ "$ACTUAL_JSR_NAME" != "$PACKAGE_NAME" ]; then
+                echo "::notice::Package configured in jsr.json ($ACTUAL_JSR_NAME) differs from scope-based name ($PACKAGE_NAME)"
+                echo "::notice::Will check existence of actual package name: $ACTUAL_JSR_NAME"
+                
+                # Extract scope and name from the actual jsr.json name
+                ACTUAL_SCOPE=$(echo "$ACTUAL_JSR_NAME" | cut -d'/' -f1 | sed 's/@//')
+                ACTUAL_PACKAGE_NAME=$(echo "$ACTUAL_JSR_NAME" | cut -d'/' -f2)
+                
+                if [ -n "$ACTUAL_SCOPE" ] && [ -n "$ACTUAL_PACKAGE_NAME" ]; then
+                  # Check the actual package name
+                  ACTUAL_API_URL="https://api.jsr.io/scopes/$ACTUAL_SCOPE/packages/$ACTUAL_PACKAGE_NAME"
+                  ACTUAL_WEB_URL="https://jsr.io/@$ACTUAL_SCOPE/$ACTUAL_PACKAGE_NAME"
+                  
+                  echo "Checking actual JSR package: $ACTUAL_API_URL"
+                  ACTUAL_API_RESPONSE=$(curl -s -w "\n%{http_code}" "$ACTUAL_API_URL")
+                  ACTUAL_API_STATUS=$(echo "$ACTUAL_API_RESPONSE" | tail -n1)
+                  
+                  if [ "$ACTUAL_API_STATUS" = "200" ]; then
+                    echo "✅ Actual package $ACTUAL_JSR_NAME exists on JSR"
+                    echo "package_exists=true" >> $GITHUB_OUTPUT
+                    echo "jsr_package_name=$ACTUAL_JSR_NAME" >> $GITHUB_OUTPUT
+                  else
+                    echo "::notice::Package '$ACTUAL_JSR_NAME' not found on JSR (404)%0AWill attempt to publish as new package"
+                    echo "package_exists=false" >> $GITHUB_OUTPUT
+                    echo "jsr_package_name=$ACTUAL_JSR_NAME" >> $GITHUB_OUTPUT
+                  fi
+                else
+                  echo "::warning::Invalid package name format in jsr.json: $ACTUAL_JSR_NAME"
+                  echo "::warning::To register this package on JSR:%0A1. Visit https://jsr.io%0A2. Sign in with your GitHub account%0A3. Create a new package with the name: $PACKAGE_NAME%0AWill attempt to publish anyway - it might be a new package"
+                  echo "package_exists=false" >> $GITHUB_OUTPUT
+                fi
+              else
+                echo "::warning::Package '$PACKAGE_NAME' not found on JSR (404)%0ATo register this package on JSR:%0A1. Visit https://jsr.io%0A2. Sign in with your GitHub account%0A3. Create a new package with the name: $PACKAGE_NAME%0AWill attempt to publish anyway - it might be a new package"
+                echo "package_exists=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "::warning::Package '$PACKAGE_NAME' not found on JSR (404)%0ATo register this package on JSR:%0A1. Visit https://jsr.io%0A2. Sign in with your GitHub account%0A3. Create a new package with the name: $PACKAGE_NAME%0AWill attempt to publish anyway - it might be a new package"
+              echo "package_exists=false" >> $GITHUB_OUTPUT
+            fi
           else
             echo "::notice::Could not determine package existence (API: $API_STATUS, Web: $HTTP_STATUS) - proceeding with publish"
             echo "package_exists=unknown" >> $GITHUB_OUTPUT

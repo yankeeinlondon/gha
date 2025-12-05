@@ -289,7 +289,7 @@ jobs:
             - name: Setup
               run: npm i -g pnpm
             - name: Install Windows dependencies (choco)
-              if: runner.os == 'Windows' && inputs.choco_install != ''
+              if: ${{ runner.os == 'Windows' && inputs.choco_install != '' }}
               run: |
                 echo "Installing packages via Chocolatey: ${{ inputs.choco_install }}"
                 choco install ${{ inputs.choco_install }} -y --no-progress

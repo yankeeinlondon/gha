@@ -22,6 +22,11 @@ on:
                 description: "allows an API token to be passed to testing as API_TOKEN and VITE_API_TOKEN"
                 default: ""
                 required: false
+              choco_install:
+                type: string
+                default: ""
+                description: "Space-separated list of packages to install via Chocolatey on Windows (e.g., 'jq yq curl')"
+                required: false
             gh_token:
                 description: "allows a Github personal access token to be passed to testing as GH_TOKEN and VITE_GH_TOKEN"
                 type: string
@@ -283,7 +288,12 @@ jobs:
                   node-version: ${{ needs.detect-configuration.outputs.single_node }}
             - name: Setup
               run: npm i -g pnpm
-
+            - name: Install Windows dependencies (choco)
+              if: runner.os == 'Windows' && inputs.choco_install != ''
+              run: |
+                echo "Installing packages via Chocolatey: ${{ inputs.choco_install }}"
+                choco install ${{ inputs.choco_install }} -y --no-progress
+                shell: bash
             - name: Install Deps (bun)
               if: ${{ inputs.bun }}
               run: bun install

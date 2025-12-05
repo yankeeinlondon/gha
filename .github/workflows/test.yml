@@ -22,7 +22,7 @@ on:
                 description: "allows an API token to be passed to testing as API_TOKEN and VITE_API_TOKEN"
                 default: ""
                 required: false
-              choco_install:
+            choco_install:
                 type: string
                 default: ""
                 description: "Space-separated list of packages to install via Chocolatey on Windows (e.g., 'jq yq curl')"

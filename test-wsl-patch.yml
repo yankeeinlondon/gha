@@ -295,16 +295,16 @@ jobs:
                   additional-packages: curl
 
             - uses: oven-sh/setup-bun@v2
-              if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
+              if: "!inputs.use_wsl || runner.os != 'Windows'"
 
             - name: Use Node.js ${{ needs.detect-configuration.outputs.single_node }}
-              if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
+              if: "!inputs.use_wsl || runner.os != 'Windows'"
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ needs.detect-configuration.outputs.single_node }}
 
             - name: Setup pnpm
-              if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
+              if: "!inputs.use_wsl || runner.os != 'Windows'"
               run: npm i -g pnpm
 
             - name: Install Windows dependencies (choco)
@@ -332,7 +332,7 @@ jobs:
               if: inputs.bun && (!inputs.use_wsl || runner.os != 'Windows')
               run: bun install
             - name: Install Deps (pnpm)
-              if: ${{ !inputs.bun && (!inputs.use_wsl || runner.os != 'Windows') }}
+              if: "!inputs.bun && (!inputs.use_wsl || runner.os != 'Windows')"
               run: pnpm install
 
             # Install dependencies - WSL
@@ -357,7 +357,7 @@ jobs:
 
             # Test - native
             - name: Test
-              if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
+              if: "!inputs.use_wsl || runner.os != 'Windows'"
               run: pnpm test
 
             # Test - WSL
@@ -402,23 +402,16 @@ jobs:
                   additional-packages: curl
 
             - uses: oven-sh/setup-bun@v2
-              if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
+              if: "!inputs.use_wsl || runner.os != 'Windows'"
 
             - name: Use Node.js ${{ matrix.node-version }}
-              if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
+              if: "!inputs.use_wsl || runner.os != 'Windows'"
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
-            - name: Install Windows dependencies (choco)
-              if: runner.os == 'Windows' && inputs.choco_install != '' && !inputs.use_wsl
-              run: |
-                echo "Installing packages via Chocolatey: ${{ inputs.choco_install }}"
-                choco install ${{ inputs.choco_install }} -y --no-progress
-              shell: bash
-
 
             - name: Install pnpm
-              if: ${{ !inputs.bun && (!inputs.use_wsl || runner.os != 'Windows') }}
+              if: "!inputs.bun && (!inputs.use_wsl || runner.os != 'Windows')"
               run: npm i -g pnpm
 
             # WSL-specific setup steps
@@ -441,7 +434,7 @@ jobs:
               if: inputs.bun && (!inputs.use_wsl || runner.os != 'Windows')
               run: bun install
             - name: Install Deps (pnpm)
-              if: ${{ !inputs.bun && (!inputs.use_wsl || runner.os != 'Windows') }}
+              if: "!inputs.bun && (!inputs.use_wsl || runner.os != 'Windows')"
               run: pnpm install
 
             # Install dependencies - WSL
@@ -466,7 +459,7 @@ jobs:
 
             # Test - native
             - name: Test
-              if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
+              if: "!inputs.use_wsl || runner.os != 'Windows'"
               run: pnpm test
 
             # Test - WSL

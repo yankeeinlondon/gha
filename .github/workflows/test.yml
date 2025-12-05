@@ -293,7 +293,7 @@ jobs:
               run: |
                 echo "Installing packages via Chocolatey: ${{ inputs.choco_install }}"
                 choco install ${{ inputs.choco_install }} -y --no-progress
-                shell: bash
+              shell: bash
             - name: Install Deps (bun)
               if: ${{ inputs.bun }}
               run: bun install

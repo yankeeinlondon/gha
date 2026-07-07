@@ -372,18 +372,12 @@ jobs:
       - name: Publish to NPM (Trusted Publishing / OIDC)
         if: steps.auth-mode.outputs.mode == 'oidc'
         run: |
-          # Diagnostics — OIDC needs these present in THIS step's env (values not printed):
-          echo "GITHUB_ACTIONS=${GITHUB_ACTIONS:-unset}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL present: ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN present: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+yes}"
-          echo "npm version: $(npm --version)"
           ACCESS_FLAG=""
           if [ "${{ steps.npm-check.outputs.access_level }}" != "null" ] && [ "${{ steps.npm-check.outputs.access_level }}" != "" ]; then
             ACCESS_FLAG="--access ${{ steps.npm-check.outputs.access_level }}"
           fi
           echo "Publishing via Trusted Publishing (OIDC) with access level: ${{ steps.npm-check.outputs.access_level }}"
-          # --loglevel silly surfaces npm's oidc() decision if this fails again; trim once green.
-          npm publish $ACCESS_FLAG --loglevel silly
+          npm publish $ACCESS_FLAG
   publish_jsr:
     name: jsr
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.jsr != '' )

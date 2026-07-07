@@ -22,11 +22,15 @@ jobs:
     name: publish
     if: contains(github.event.head_commit.message, 'release v')
     needs: test  # This ensures tests pass before publishing
-    # Required for npm/JSR Trusted Publishing (OIDC). The caller MUST grant this —
-    # a reusable workflow cannot elevate its own token permissions.
+    # A caller permissions block is the CEILING for every job in the reusable
+    # workflow, so grant the union all of them need:
+    #   id-token: write -> Trusted Publishing (OIDC) for npm + JSR
+    #   contents: write -> changelog commit / tag removal
+    #   packages: write -> GitHub Packages publishing
     permissions:
       id-token: write
-      contents: read
+      contents: write
+      packages: write
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
     # with:
     #   jsr_scope: '@org'              # Optional: scope for JSR if package.json has root-level name
@@ -115,7 +119,8 @@ jobs:
     if: contains(github.event.head_commit.message, 'release v')
     permissions:
       id-token: write
-      contents: read
+      contents: write
+      packages: write
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
     with:
       jsr_scope: '@org'              # Will publish as @org/my-package to JSR

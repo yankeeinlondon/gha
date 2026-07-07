@@ -22,13 +22,25 @@ jobs:
     name: publish
     if: contains(github.event.head_commit.message, 'release v')
     needs: test  # This ensures tests pass before publishing
+    # Required for npm/JSR Trusted Publishing (OIDC). The caller MUST grant this —
+    # a reusable workflow cannot elevate its own token permissions.
+    permissions:
+      id-token: write
+      contents: read
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
     # with:
     #   jsr_scope: '@org'              # Optional: scope for JSR if package.json has root-level name
     #   github_packages_scope: '@org'   # Optional: scope for GitHub Packages if package.json has root-level name
+    # NPM_TOKEN is optional — omit it to publish to npm via Trusted Publishing (OIDC).
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
+
+> [!IMPORTANT]
+> The `permissions: id-token: write` block on the calling job is mandatory for
+> Trusted Publishing. Because this is a *reusable* workflow, granting `id-token: write`
+> only inside `publish.yml` is not enough — GitHub caps a called workflow's token to
+> what the caller provides, so the grant must live in *your* `main.yml`.
 
 ### Customizing Test Configuration
 
@@ -101,6 +113,9 @@ jobs:
   publish:
     name: publish
     if: contains(github.event.head_commit.message, 'release v')
+    permissions:
+      id-token: write
+      contents: read
     uses: yankeeinlondon/gha/.github/workflows/publish.yml@main
     with:
       jsr_scope: '@org'              # Will publish as @org/my-package to JSR
@@ -142,8 +157,14 @@ PACKAGE_NAME:registry=https://npm.pkg.github.com/
 
 #### CI/CD Publication
 
-- to publish to **NPM** you must:
-  - have an NPM token which has workflow permissions to publish
+- to publish to **NPM** you can use either of two auth methods:
+  - **Trusted Publishing (OIDC)** — recommended, tokenless:
+    - configure a Trusted Publisher on npmjs.com for this repo + the publishing workflow (Package Settings → Trusted Publishers)
+    - grant `permissions: id-token: write` on the job that calls this workflow (see the usage example above)
+    - do **not** set an `NPM_TOKEN` secret — when it is absent the workflow publishes via OIDC. An empty token still counts as a credential and disables the OIDC fallback, so leave it unset entirely
+    - requires npm ≥ 11.5.1 (the workflow upgrades npm automatically)
+  - **Token** — legacy fallback:
+    - have an NPM token which has workflow permissions to publish, exposed as the `NPM_TOKEN` secret
 
 - to publish to **JSR** you must:
   - have already have an account 

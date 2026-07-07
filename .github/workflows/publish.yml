@@ -8,7 +8,7 @@ on:
         required: false
       nodeVersions:
         type: string
-        default: '["20.x", "22.x"]'
+        default: '["22.x", "24.x"]'
         required: false
       failFast:
         type: boolean
@@ -83,8 +83,8 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0
-            ref: ${{ github.ref }}
+          fetch-depth: 0
+          ref: ${{ github.ref }}
       - name: Detect Publishing Platforms
         id: platform-detection
         run: |
@@ -263,22 +263,33 @@ jobs:
     needs:
       - detect_platforms
     runs-on: ubuntu-latest
+    # id-token: write is required for npm Trusted Publishing (OIDC). This grant is
+    # capped by the CALLER: the workflow that `uses:` this reusable workflow must also
+    # set `permissions: id-token: write` on its calling job, or OIDC will be denied.
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
-    
+
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
       - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # npm Trusted Publishing requires npm >=11.5.1, which requires Node >=22.14.0
+          node-version: 24
           registry-url: https://registry.npmjs.org/
+      # pnpm publish shells out to the system npm binary for the OIDC token exchange,
+      # so the npm CLI itself must be >=11.5.1. The runner default is often older.
+      - name: Upgrade npm (required for Trusted Publishing / OIDC)
+        run: npm i -g npm@latest
       - name: Install pnpm
-        run: npm i -g pnpm 
+        run: npm i -g pnpm
 
       - name: Install Deps (bun)
         if: ${{ inputs.bun }}
@@ -286,29 +297,30 @@ jobs:
       - name: Install Deps (pnpm)
         if: ${{ !inputs.bun }}
         run: pnpm install
-  
+
       - name: Build (pnpm)
         run: pnpm build
         if: ${{ !inputs.bun }}
       - name: Build (bun)
         run: bun run build
         if: ${{ inputs.bun }}
-      - name: Check NPM Token in Publish Job
-        id: npm-token-check
-        env:
-            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Determine NPM auth mode
+        id: auth-mode
         run: |
-            echo "::group::NPM Token Check"
-            echo "Checking if NPM_TOKEN was passed to this job..."
-            if [ -z "$NODE_AUTH_TOKEN" ]; then
-                echo "::error::NPM_TOKEN secret is not available in the publish job!%0APlease ensure NPM_TOKEN is set in your repository secrets%0Aand passed correctly in the workflow call"
-                exit 1
-            else
-                echo "✅ NPM_TOKEN is available (length: ${#NODE_AUTH_TOKEN})"
-                echo "NPM config list:"
-                npm config list
-            fi
-            echo "::endgroup::"
+          echo "::group::NPM Auth Mode"
+          # A missing NPM_TOKEN is no longer fatal: without one we fall back to
+          # Trusted Publishing (OIDC). has_npm_token is computed in detect_platforms.
+          if [ "${{ needs.detect_platforms.outputs.has_npm_token }}" = "true" ]; then
+            echo "mode=token" >> "$GITHUB_OUTPUT"
+            echo "🔑 NPM_TOKEN detected — publishing with token authentication"
+          else
+            echo "mode=oidc" >> "$GITHUB_OUTPUT"
+            echo "::notice::No NPM_TOKEN — publishing via Trusted Publishing (OIDC)"
+            echo "OIDC requires: npm >=11.5.1, id-token:write on this job AND the caller,"
+            echo "and a Trusted Publisher configured for this repo+workflow on npmjs.com."
+          fi
+          echo "npm version: $(npm --version)"
+          echo "::endgroup::"
       - name: Check Package Existence and Access Level
         id: npm-check
         run: |
@@ -329,13 +341,16 @@ jobs:
             echo "access_level=public" >> $GITHUB_OUTPUT
             echo "package_exists=false" >> $GITHUB_OUTPUT
           fi
-      - name: Verify NPM Authentication
+      # ---- Token mode (backwards compatible) --------------------------------
+      - name: Verify NPM Authentication (token mode)
+        if: steps.auth-mode.outputs.mode == 'token'
         run: |
           echo "Testing NPM authentication..."
           npm whoami 2>/dev/null && echo "✅ NPM authentication successful" || echo "::warning::NPM whoami failed (may be normal for automation tokens)"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish to NPM
+      - name: Publish to NPM (token mode)
+        if: steps.auth-mode.outputs.mode == 'token'
         run: |
           ACCESS_FLAG=""
           if [ "${{ steps.npm-check.outputs.access_level }}" != "null" ] && [ "${{ steps.npm-check.outputs.access_level }}" != "" ]; then
@@ -345,6 +360,31 @@ jobs:
           pnpm publish $ACCESS_FLAG --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # ---- OIDC mode (Trusted Publishing) -----------------------------------
+      # setup-node writes an `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
+      # line into .npmrc. With NODE_AUTH_TOKEN unset that expands to an EMPTY token,
+      # and npm treats an empty string as a real credential — which disables the
+      # OIDC fallback. Strip any auth lines so npm performs the OIDC exchange.
+      - name: Prepare .npmrc for OIDC
+        if: steps.auth-mode.outputs.mode == 'oidc'
+        run: |
+          npm config set registry https://registry.npmjs.org/
+          for f in "$HOME/.npmrc" ".npmrc" "$RUNNER_TEMP/.npmrc"; do
+            if [ -f "$f" ]; then
+              sed -i.bak '/_authToken/d' "$f" && rm -f "$f.bak"
+            fi
+          done
+      # No NODE_AUTH_TOKEN env here — it MUST be completely unset for OIDC to engage.
+      - name: Publish to NPM (Trusted Publishing / OIDC)
+        if: steps.auth-mode.outputs.mode == 'oidc'
+        run: |
+          ACCESS_FLAG=""
+          if [ "${{ steps.npm-check.outputs.access_level }}" != "null" ] && [ "${{ steps.npm-check.outputs.access_level }}" != "" ]; then
+            ACCESS_FLAG="--access ${{ steps.npm-check.outputs.access_level }}"
+          fi
+          echo "Publishing via Trusted Publishing (OIDC) with access level: ${{ steps.npm-check.outputs.access_level }}"
+          pnpm publish $ACCESS_FLAG --no-git-checks
   publish_jsr:
     name: jsr
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.jsr != '' )
@@ -470,20 +510,20 @@ jobs:
               if [ -n "$ACTUAL_JSR_NAME" ] && [ "$ACTUAL_JSR_NAME" != "$PACKAGE_NAME" ]; then
                 echo "::notice::Package configured in jsr.json ($ACTUAL_JSR_NAME) differs from scope-based name ($PACKAGE_NAME)"
                 echo "::notice::Will check existence of actual package name: $ACTUAL_JSR_NAME"
-                
+
                 # Extract scope and name from the actual jsr.json name
                 ACTUAL_SCOPE=$(echo "$ACTUAL_JSR_NAME" | cut -d'/' -f1 | sed 's/@//')
                 ACTUAL_PACKAGE_NAME=$(echo "$ACTUAL_JSR_NAME" | cut -d'/' -f2)
-                
+
                 if [ -n "$ACTUAL_SCOPE" ] && [ -n "$ACTUAL_PACKAGE_NAME" ]; then
                   # Check the actual package name
                   ACTUAL_API_URL="https://api.jsr.io/scopes/$ACTUAL_SCOPE/packages/$ACTUAL_PACKAGE_NAME"
                   ACTUAL_WEB_URL="https://jsr.io/@$ACTUAL_SCOPE/$ACTUAL_PACKAGE_NAME"
-                  
+
                   echo "Checking actual JSR package: $ACTUAL_API_URL"
                   ACTUAL_API_RESPONSE=$(curl -s -w "\n%{http_code}" "$ACTUAL_API_URL")
                   ACTUAL_API_STATUS=$(echo "$ACTUAL_API_RESPONSE" | tail -n1)
-                  
+
                   if [ "$ACTUAL_API_STATUS" = "200" ]; then
                     echo "✅ Actual package $ACTUAL_JSR_NAME exists on JSR"
                     echo "package_exists=true" >> $GITHUB_OUTPUT
@@ -572,13 +612,13 @@ jobs:
               fi
               NEW_PACKAGE_NAME="$SCOPE/$PACKAGE_JSON_NAME"
               echo "::notice::Temporarily updating package.json for GitHub Packages: $NEW_PACKAGE_NAME"
-              
+
               # Create backup of original package.json
               cp package.json package.json.backup
-              
+
               # Update package.json with scoped name
               jq --arg name "$NEW_PACKAGE_NAME" '.name = $name' package.json > package.json.tmp && mv package.json.tmp package.json
-              
+
               echo "package_modified=true" >> $GITHUB_OUTPUT
             else
               echo "::warning::Root-level package detected but no github_packages_scope provided.%0AGitHub Packages requires scoped packages. Publishing may fail."
@@ -623,7 +663,7 @@ jobs:
       - detect_platforms
     runs-on: ubuntu-latest
     permissions:
-        contents: write
+      contents: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4

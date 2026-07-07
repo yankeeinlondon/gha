@@ -3,10 +3,11 @@
   "version": "0.10.1",
   "description": "Reusable Github workflow which publishes pnpm library code to npm",
   "type": "module",
-  "bin": {
-    "gha": "./dist/gha.js"
-  },
-  "module": "./dist/index.js",
+  "files": [
+    "README.md",
+    "LICENSE",
+    ".github/workflows"
+  ],
   "scripts": {
     "test": "tsx scripts/validate-workflows.ts",
     "build": "echo 'no build process is necessary'",

@@ -48,3 +48,9 @@ jspm_packages/
 **/.vuepress/dist
 
 .claudine/tmp/
+
+# Vue-template artifacts leaked in from a parent vite.config.ts (not part of this repo)
+public/assets/fonts/
+src/auto-imports.d.ts
+src/components.d.ts
+src/typed-router.d.ts

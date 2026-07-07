@@ -17,7 +17,7 @@ pnpm test  # Run tests (validates YAML files)
 ### Linting
 
 ```bash
-pnpm lint  # Run linting (actually runs tests via vitest)
+pnpm lint  # Run linting (actually runs the workflow YAML validation)
 ```
 
 ### Creating a Release
@@ -36,7 +36,7 @@ pnpm release  # Uses bumpp to create a new release
 
 2. **Test Strategy**
    - Tests validate that the YAML workflow files are syntactically correct
-   - Uses Vitest as the test runner with js-yaml for YAML parsing
+   - Runs `scripts/validate-workflows.ts` via tsx, using js-yaml for YAML parsing
 
 3. **Publishing Platform Detection**
    - NPM: Requires `package.json` with `private: false`

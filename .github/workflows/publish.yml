@@ -81,7 +81,7 @@ jobs:
       all_skipped: ${{ steps.platform-detection.outputs.all_skipped }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -271,7 +271,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -279,7 +279,7 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # npm Trusted Publishing requires npm >=11.5.1, which requires Node >=22.14.0
           node-version: 24
@@ -388,8 +388,8 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - uses: pnpm/action-setup@v2
@@ -565,8 +565,8 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - uses: pnpm/action-setup@v2
@@ -659,7 +659,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Create Changelog Entry
@@ -687,7 +687,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout repo for tag removal
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}

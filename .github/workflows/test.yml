@@ -123,7 +123,7 @@ jobs:
             has_unit: ${{ steps.check.outputs.has_unit }}
             has_lint: ${{ steps.check.outputs.has_lint }}
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
             - name: Check for coverage script
               id: check
               run: |
@@ -157,9 +157,9 @@ jobs:
         if: needs.check-coverage.outputs.has_coverage == 'true'
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v5
             - name: Setup
               run: npm i -g pnpm @antfu/ni
             - name: Install
@@ -169,7 +169,7 @@ jobs:
             - name: Run coverage
               run: pnpm coverage
             - name: Upload coverage reports
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               with:
                   name: coverage-report
                   path: |
@@ -284,7 +284,7 @@ jobs:
             OS: ${{ github.env.RUNNER_OS }}
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             # WSL Setup for Windows
             - name: Setup WSL
@@ -299,7 +299,7 @@ jobs:
 
             - name: Use Node.js ${{ needs.detect-configuration.outputs.single_node }}
               if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v5
               with:
                   node-version: ${{ needs.detect-configuration.outputs.single_node }}
 
@@ -391,7 +391,7 @@ jobs:
             fail-fast: ${{ inputs.failFast }}
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             # WSL Setup for Windows
             - name: Setup WSL
@@ -406,7 +406,7 @@ jobs:
 
             - name: Use Node.js ${{ matrix.node-version }}
               if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v5
               with:
                   node-version: ${{ matrix.node-version }}
             - name: Install Windows dependencies (choco)
@@ -507,7 +507,7 @@ jobs:
                   echo "::endgroup::"
                   echo "::notice:: ${{github.actor}} has triggered CI"
             - name: Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
             - name: Setup
               run: npm i -g pnpm @antfu/ni
             - name: Clean Install

@@ -375,7 +375,10 @@ jobs:
               sed -i.bak '/_authToken/d' "$f" && rm -f "$f.bak"
             fi
           done
-      # No NODE_AUTH_TOKEN env here — it MUST be completely unset for OIDC to engage.
+      # Publish with the npm CLI, NOT pnpm: pnpm's own OIDC token exchange is broken
+      # (ERR_PNPM_AUTH_TOKEN_EXCHANGE 404, after which it silently skips OIDC and 404s
+      # the publish — pnpm/pnpm#9812, #11513). npm's implementation is the reference and
+      # works. No NODE_AUTH_TOKEN env — it MUST be unset for npm to engage OIDC.
       - name: Publish to NPM (Trusted Publishing / OIDC)
         if: steps.auth-mode.outputs.mode == 'oidc'
         run: |
@@ -384,7 +387,7 @@ jobs:
             ACCESS_FLAG="--access ${{ steps.npm-check.outputs.access_level }}"
           fi
           echo "Publishing via Trusted Publishing (OIDC) with access level: ${{ steps.npm-check.outputs.access_level }}"
-          pnpm publish $ACCESS_FLAG --no-git-checks
+          npm publish $ACCESS_FLAG
   publish_jsr:
     name: jsr
     if: ( contains(github.event.head_commit.message, 'release v') && needs.detect_platforms.outputs.jsr != '' )

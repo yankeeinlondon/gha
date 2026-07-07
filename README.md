@@ -164,9 +164,15 @@ PACKAGE_NAME:registry=https://npm.pkg.github.com/
 
 - to publish to **NPM** you can use either of two auth methods:
   - **Trusted Publishing (OIDC)** — recommended, tokenless:
-    - configure a Trusted Publisher on npmjs.com for this repo + the publishing workflow (Package Settings → Trusted Publishers)
+    - configure a Trusted Publisher on npmjs.com (Package Settings → Trusted Publishers)
+    - ⚠️ **Register your _caller_ workflow filename, NOT `publish.yml`.** Because this is a reusable
+      workflow, npm validates the filename of the workflow that is _triggered_ (the one with `on: push`
+      in your repo, e.g. `main.yml`) — not the reusable workflow that actually runs `npm publish`.
+      Registering `publish.yml` produces `404 "OIDC token exchange error - package not found"`.
+      Set: Organization/User = your GitHub owner, Repository = your repo, Workflow = `main.yml`
+      (or whatever your entry workflow is named), Environment = blank.
     - grant `permissions: id-token: write` on the job that calls this workflow (see the usage example above)
-    - do **not** set an `NPM_TOKEN` secret — when it is absent the workflow publishes via OIDC. An empty token still counts as a credential and disables the OIDC fallback, so leave it unset entirely
+    - do **not** set an `NPM_TOKEN` secret — when it is absent the workflow publishes via OIDC (leave it unset entirely)
     - requires npm ≥ 11.5.1 (the workflow upgrades npm automatically)
   - **Token** — legacy fallback:
     - have an NPM token which has workflow permissions to publish, exposed as the `NPM_TOKEN` secret

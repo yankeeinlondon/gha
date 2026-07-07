@@ -1,0 +1,10 @@
+# Controls which dependencies may run install/build scripts.
+# CI installs the latest pnpm (v11+), which reads `allowBuilds` here and ignores
+# the `pnpm` field in package.json; it also defaults strictDepBuilds:true, so any
+# unreviewed build script is a hard error (ERR_PNPM_IGNORED_BUILDS).
+#   esbuild    -> needs its postinstall to fetch its platform binary (vitest/tsdown)
+#   contextify -> ancient native optional dep of jsdom@0.2.19 (via the `jq` package);
+#                 not needed and won't build on modern Node, so acknowledge + skip it.
+allowBuilds:
+  esbuild: true
+  contextify: false

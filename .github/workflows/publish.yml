@@ -284,6 +284,10 @@ jobs:
           # npm Trusted Publishing requires npm >=11.5.1, which requires Node >=22.14.0
           node-version: 24
           registry-url: https://registry.npmjs.org/
+          # setup-node@v5 defaults package-manager-cache to true, which auto-detects
+          # pnpm from the lockfile and invokes it during Node setup — before pnpm is
+          # installed below. That aborts with "Unable to locate executable file: pnpm".
+          package-manager-cache: false
       # pnpm publish shells out to the system npm binary for the OIDC token exchange,
       # so the npm CLI itself must be >=11.5.1. The runner default is often older.
       - name: Upgrade npm (required for Trusted Publishing / OIDC)
@@ -392,6 +396,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # Avoid v5's pnpm auto-cache running before pnpm is installed. See publish_npm.
+          package-manager-cache: false
       - uses: pnpm/action-setup@v2
         with:
           version: latest
@@ -569,6 +575,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # Avoid v5's pnpm auto-cache running before pnpm is installed. See publish_npm.
+          package-manager-cache: false
       - uses: pnpm/action-setup@v2
         with:
           version: latest

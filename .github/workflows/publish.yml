@@ -81,7 +81,7 @@ jobs:
       all_skipped: ${{ steps.platform-detection.outputs.all_skipped }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -271,7 +271,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -279,12 +279,12 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
       - name: Install Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           # npm Trusted Publishing requires npm >=11.5.1, which requires Node >=22.14.0
           node-version: 24
           registry-url: https://registry.npmjs.org/
-          # setup-node@v5 defaults package-manager-cache to true, which auto-detects
+          # setup-node@v5+ defaults package-manager-cache to true, which auto-detects
           # pnpm from the lockfile and invokes it during Node setup — before pnpm is
           # installed below. That aborts with "Unable to locate executable file: pnpm".
           package-manager-cache: false
@@ -334,8 +334,8 @@ jobs:
           # First test without auth (public package check)
           if npm view "$PACKAGE_NAME" --json 2>/dev/null; then
             echo "✅ Package exists on NPM"
-            # Get current access level
-            ACCESS_LEVEL=$(npm view "$PACKAGE_NAME" --json | jq -r '.access // "public"')
+            # Get current access level (npm >=12 returns an array from `npm view --json`)
+            ACCESS_LEVEL=$(npm view "$PACKAGE_NAME" --json | jq -r '(if type == "array" then .[0] else . end) | .access // "public"')
             echo "Current access level: $ACCESS_LEVEL"
             echo "access_level=$ACCESS_LEVEL" >> $GITHUB_OUTPUT
             echo "package_exists=true" >> $GITHUB_OUTPUT
@@ -392,15 +392,22 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
-          # Avoid v5's pnpm auto-cache running before pnpm is installed. See publish_npm.
+          # Avoid v5+'s pnpm auto-cache running before pnpm is installed. See publish_npm.
           package-manager-cache: false
-      - uses: pnpm/action-setup@v2
+      # pnpm/action-setup v4+ errors if `version` conflicts with package.json's
+      # packageManager / devEngines.packageManager, so only pass `latest` when unpinned
+      - name: Detect pinned pnpm version
+        id: pnpm-pin
+        run: |
+          PINNED=$(jq -r '((.packageManager // "") | startswith("pnpm@")) or (.devEngines.packageManager.name == "pnpm" and .devEngines.packageManager.version != null)' package.json 2>/dev/null || echo false)
+          echo "pinned=$PINNED" >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@v6
         with:
-          version: latest
+          version: ${{ steps.pnpm-pin.outputs.pinned != 'true' && 'latest' || '' }}
       - run: pnpm install --frozen-lockfile
       - name: Handle JSR Package Naming
         id: jsr-naming
@@ -571,15 +578,22 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
-          # Avoid v5's pnpm auto-cache running before pnpm is installed. See publish_npm.
+          # Avoid v5+'s pnpm auto-cache running before pnpm is installed. See publish_npm.
           package-manager-cache: false
-      - uses: pnpm/action-setup@v2
+      # pnpm/action-setup v4+ errors if `version` conflicts with package.json's
+      # packageManager / devEngines.packageManager, so only pass `latest` when unpinned
+      - name: Detect pinned pnpm version
+        id: pnpm-pin
+        run: |
+          PINNED=$(jq -r '((.packageManager // "") | startswith("pnpm@")) or (.devEngines.packageManager.name == "pnpm" and .devEngines.packageManager.version != null)' package.json 2>/dev/null || echo false)
+          echo "pinned=$PINNED" >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@v6
         with:
-          version: latest
+          version: ${{ steps.pnpm-pin.outputs.pinned != 'true' && 'latest' || '' }}
       - name: Install pnpm
         run: npm i -g pnpm bun
       - name: Setup GitHub Packages registry
@@ -667,7 +681,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Create Changelog Entry
@@ -695,7 +709,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout repo for tag removal
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}

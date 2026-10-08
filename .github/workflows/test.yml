@@ -123,7 +123,7 @@ jobs:
             has_unit: ${{ steps.check.outputs.has_unit }}
             has_lint: ${{ steps.check.outputs.has_lint }}
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v7
             - name: Check for coverage script
               id: check
               run: |
@@ -157,11 +157,11 @@ jobs:
         if: needs.check-coverage.outputs.has_coverage == 'true'
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v7
             - name: Setup Node
-              uses: actions/setup-node@v5
+              uses: actions/setup-node@v7
               with:
-                  # setup-node@v5 defaults package-manager-cache to true, which
+                  # setup-node@v5+ defaults package-manager-cache to true, which
                   # auto-detects pnpm from the lockfile and invokes it before it
                   # is installed. Disable it; we cache the pnpm store explicitly.
                   package-manager-cache: false
@@ -172,7 +172,7 @@ jobs:
               shell: bash
               run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
             - name: Cache pnpm store
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ${{ steps.pnpm-store.outputs.path }}
                   key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -184,7 +184,7 @@ jobs:
             - name: Run coverage
               run: pnpm coverage
             - name: Upload coverage reports
-              uses: actions/upload-artifact@v5
+              uses: actions/upload-artifact@v7
               with:
                   name: coverage-report
                   path: |
@@ -299,12 +299,12 @@ jobs:
             OS: ${{ github.env.RUNNER_OS }}
 
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v7
 
             # WSL Setup for Windows
             - name: Setup WSL
               if: runner.os == 'Windows' && inputs.use_wsl
-              uses: Vampire/setup-wsl@v3
+              uses: Vampire/setup-wsl@v7
               with:
                   distribution: ${{ inputs.wsl_distro }}
                   additional-packages: curl
@@ -314,10 +314,10 @@ jobs:
 
             - name: Use Node.js ${{ needs.detect-configuration.outputs.single_node }}
               if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
-              uses: actions/setup-node@v5
+              uses: actions/setup-node@v7
               with:
                   node-version: ${{ needs.detect-configuration.outputs.single_node }}
-                  # See coverage job: avoid v5's pnpm auto-cache before pnpm exists.
+                  # See coverage job: avoid v5+'s pnpm auto-cache before pnpm exists.
                   package-manager-cache: false
 
             - name: Setup pnpm
@@ -331,7 +331,7 @@ jobs:
               run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
             - name: Cache pnpm store
               if: ${{ !inputs.bun && (!inputs.use_wsl || runner.os != 'Windows') }}
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ${{ steps.pnpm-store.outputs.path }}
                   key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -421,12 +421,12 @@ jobs:
             fail-fast: ${{ inputs.failFast }}
 
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v7
 
             # WSL Setup for Windows
             - name: Setup WSL
               if: runner.os == 'Windows' && inputs.use_wsl
-              uses: Vampire/setup-wsl@v3
+              uses: Vampire/setup-wsl@v7
               with:
                   distribution: ${{ inputs.wsl_distro }}
                   additional-packages: curl
@@ -436,10 +436,10 @@ jobs:
 
             - name: Use Node.js ${{ matrix.node-version }}
               if: ${{ !inputs.use_wsl || runner.os != 'Windows' }}
-              uses: actions/setup-node@v5
+              uses: actions/setup-node@v7
               with:
                   node-version: ${{ matrix.node-version }}
-                  # See coverage job: avoid v5's pnpm auto-cache before pnpm exists.
+                  # See coverage job: avoid v5+'s pnpm auto-cache before pnpm exists.
                   package-manager-cache: false
             - name: Install Windows dependencies (choco)
               if: runner.os == 'Windows' && inputs.choco_install != '' && !inputs.use_wsl
@@ -460,7 +460,7 @@ jobs:
               run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
             - name: Cache pnpm store
               if: ${{ !inputs.bun && (!inputs.use_wsl || runner.os != 'Windows') }}
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ${{ steps.pnpm-store.outputs.path }}
                   key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -552,7 +552,7 @@ jobs:
                   echo "::endgroup::"
                   echo "::notice:: ${{github.actor}} has triggered CI"
             - name: Checkout Code
-              uses: actions/checkout@v5
+              uses: actions/checkout@v7
             - name: Setup
               run: npm i -g pnpm @antfu/ni
             - name: Clean Install
@@ -563,7 +563,10 @@ jobs:
               run: pnpm run --if-present lint
             - name: Cancel Workflow
               if: failure()
-              uses: andymckay/cancel-action@0.4
+              # Replaces andymckay/cancel-action, which still runs on the deprecated Node.js 20
+              run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
+              env:
+                  GH_TOKEN: ${{ github.token }}
 
     success:
         name: success
